@@ -720,6 +720,20 @@ body.game-mode .game-toggle {
   background: rgba(99, 102, 241, 0.1);
 }
 
+.btn-game {
+  background: linear-gradient(135deg, var(--accent-secondary), #00ff88);
+  color: var(--bg-primary);
+  border: 2px solid var(--accent-secondary);
+  font-weight: 600;
+  box-shadow: 0 4px 15px rgba(0, 255, 136, 0.3);
+}
+
+.btn-game:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 255, 136, 0.5);
+  background: linear-gradient(135deg, #00ff88, var(--accent-secondary));
+}
+
 /* ============================================
    EXPERIENCE PAGE
    ============================================ */

@@ -39,6 +39,9 @@ export class Player extends Phaser.GameObjects.Container {
     // Agregar al scene
     scene.add.existing(this);
     
+    // Configurar depth para que esté visible
+    this.setDepth(10);
+    
     // Configurar física
     scene.physics.add.existing(this);
     this.body.setCircle(16, -16, -16);

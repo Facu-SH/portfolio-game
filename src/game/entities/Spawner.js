@@ -26,6 +26,9 @@ export class Spawner extends Phaser.GameObjects.Container {
     
     scene.add.existing(this);
     
+    // Configurar depth para que esté visible
+    this.setDepth(10);
+    
     // Física
     scene.physics.add.existing(this, true); // static body
     this.body.setCircle(32, -32, -32);

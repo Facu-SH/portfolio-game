@@ -25,6 +25,25 @@ export class MainScene extends Phaser.Scene {
     this.lastMouseY = undefined;
     this.collectiblesAutoMagnetize = false;
     
+    // Estadísticas detalladas
+    this.gameStartTime = 0;
+    this.gameEndTime = 0;
+    this.enemiesKilledByType = {
+      SCOUT: 0,
+      DRIFTER: 0,
+      TANK: 0,
+      SHOOTER: 0,
+      SWARM: 0
+    };
+    this.upgradesPurchased = [];
+    this.sectionsCompleted = [];
+    this.bulletsFired = 0;
+    this.bulletsHit = 0;
+    this.missilesFired = 0;
+    this.missilesHit = 0;
+    this.deathSection = null;
+    this.deathScreen = null;
+    
     // Sistema de mejoras - niveles actuales
     this.upgradeLevels = {
       BULLET_DAMAGE: 0,
@@ -103,6 +122,9 @@ export class MainScene extends Phaser.Scene {
     
     // Crear jugador
     this.player = new Player(this, this.scale.width / 2, this.scale.height - 200);
+    this.player.setVisible(true);
+    this.player.setAlpha(1);
+    console.log('👤 Jugador creado:', this.player.x, this.player.y, 'visible:', this.player.visible, 'alpha:', this.player.alpha);
     
     // Input
     this.setupInput();
@@ -256,6 +278,12 @@ export class MainScene extends Phaser.Scene {
     this.events.on('enemyDeath', (x, y, points, crystalDrop, type) => {
       this.score += points;
       this.enemiesKilled++;
+      
+      // Rastrear por tipo
+      if (this.enemiesKilledByType[type] !== undefined) {
+        this.enemiesKilledByType[type]++;
+      }
+      
       this.updateHUD();
       
       // Drop de cristales (cantidad según el tipo de enemigo)
@@ -354,12 +382,14 @@ export class MainScene extends Phaser.Scene {
     const damage = bullet.damage;
     bullet.destroy();
     enemy.takeDamage(damage);
+    this.bulletsHit++;
   }
   
   bulletHitSpawner(bullet, spawner) {
     const damage = bullet.damage;
     bullet.destroy();
     spawner.takeDamage(damage);
+    this.bulletsHit++;
   }
   
   checkAllCollisions() {
@@ -541,6 +571,7 @@ export class MainScene extends Phaser.Scene {
     
     missile.explode();
     enemy.takeDamage(GAME_CONFIG.PLAYER.MISSILE_DAMAGE);
+    this.missilesHit++;
   }
   
   missileHitSpawner(missile, spawner) {
@@ -549,6 +580,7 @@ export class MainScene extends Phaser.Scene {
     
     missile.explode();
     spawner.takeDamage(GAME_CONFIG.PLAYER.MISSILE_DAMAGE);
+    this.missilesHit++;
   }
   
   enemyBulletHitPlayer(player, bullet) {
@@ -1018,6 +1050,22 @@ export class MainScene extends Phaser.Scene {
     this.currentScreenInSection = 0;
     this.screenCompleted = false;
     
+    // Iniciar tracking de estadísticas
+    this.gameStartTime = this.time.now;
+    this.enemiesKilledByType = {
+      SCOUT: 0,
+      DRIFTER: 0,
+      TANK: 0,
+      SHOOTER: 0,
+      SWARM: 0
+    };
+    this.upgradesPurchased = [];
+    this.sectionsCompleted = [];
+    this.bulletsFired = 0;
+    this.bulletsHit = 0;
+    this.missilesFired = 0;
+    this.missilesHit = 0;
+    
     // Ocultar botón de inicio alternativo
     const startBtn = document.getElementById('start-game-btn');
     if (startBtn) {
@@ -1026,6 +1074,14 @@ export class MainScene extends Phaser.Scene {
     
     // Activar captura de eventos del juego
     this.setGameActive(true);
+    
+    // Asegurar que el jugador sea visible
+    if (this.player) {
+      this.player.setVisible(true);
+      this.player.setAlpha(1);
+      this.player.setDepth(10);
+      console.log('👤 Jugador visible al iniciar:', this.player.visible, this.player.alpha);
+    }
     
     // Ocultar UI de idle
     this.tweens.add({
@@ -1094,6 +1150,17 @@ export class MainScene extends Phaser.Scene {
       this.createPauseUI();
     }
     this.pauseUI.setVisible(true);
+    
+    // Animación de entrada
+    this.pauseUI.alpha = 0;
+    this.pauseUI.scale = 0.9;
+    this.tweens.add({
+      targets: this.pauseUI,
+      alpha: 1,
+      scale: 1,
+      duration: 300,
+      ease: 'Back.easeOut'
+    });
   }
   
   resumeGame() {
@@ -1109,21 +1176,163 @@ export class MainScene extends Phaser.Scene {
     this.pauseUI = this.add.container(this.scale.width / 2, this.scale.height / 2);
     this.pauseUI.setDepth(150);
     
-    // Fondo oscuro
+    // Fondo con efecto
     const bg = this.add.graphics();
-    bg.fillStyle(0x000000, 0.8);
+    bg.fillStyle(0x000000, 0.9);
     bg.fillRect(-this.scale.width / 2, -this.scale.height / 2, this.scale.width, this.scale.height);
     
-    // Texto
-    const pauseText = this.add.text(0, 0, 'PAUSA\n\nPresiona ESC para continuar', {
+    // Bordes decorativos
+    bg.lineStyle(3, 0x00ffff, 0.6);
+    bg.strokeRect(-this.scale.width / 2 + 20, -this.scale.height / 2 + 20, this.scale.width - 40, this.scale.height - 40);
+    bg.lineStyle(1, 0x00ffff, 0.3);
+    bg.strokeRect(-this.scale.width / 2 + 30, -this.scale.height / 2 + 30, this.scale.width - 60, this.scale.height - 60);
+    
+    // Partículas de fondo (estrellas)
+    for (let i = 0; i < 20; i++) {
+      const star = this.add.graphics();
+      const x = (Math.random() - 0.5) * this.scale.width * 0.9;
+      const y = (Math.random() - 0.5) * this.scale.height * 0.9;
+      star.fillStyle(0x00ffff, Math.random() * 0.4 + 0.2);
+      star.fillCircle(x, y, Math.random() * 2 + 1);
+      this.pauseUI.add(star);
+      
+      // Animación de parpadeo
+      this.tweens.add({
+        targets: star,
+        alpha: { from: 0.2, to: 0.8 },
+        duration: 1000 + Math.random() * 2000,
+        yoyo: true,
+        repeat: -1
+      });
+    }
+    
+    // Panel central
+    const panelWidth = 400;
+    const panelHeight = 300;
+    const panel = this.add.graphics();
+    panel.fillStyle(0x001122, 0.8);
+    panel.fillRoundedRect(-panelWidth / 2, -panelHeight / 2, panelWidth, panelHeight, 15);
+    panel.lineStyle(2, 0x00ffff, 0.8);
+    panel.strokeRoundedRect(-panelWidth / 2, -panelHeight / 2, panelWidth, panelHeight, 15);
+    
+    // Título de pausa
+    const pauseText = this.add.text(0, -100, '⏸️ PAUSA', {
       fontFamily: '"Orbitron", sans-serif',
-      fontSize: '28px',
+      fontSize: '42px',
       color: '#00ffff',
-      align: 'center'
+      stroke: '#003333',
+      strokeThickness: 4
     });
     pauseText.setOrigin(0.5);
     
-    this.pauseUI.add([bg, pauseText]);
+    // Efecto de pulso en el título
+    this.tweens.add({
+      targets: pauseText,
+      scale: { from: 1, to: 1.05 },
+      duration: 1000,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+    
+    // Estadísticas rápidas
+    const gameTime = this.time.now - this.gameStartTime;
+    const minutes = Math.floor(gameTime / 60000);
+    const seconds = Math.floor((gameTime % 60000) / 1000);
+    const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    
+    const statsText = this.add.text(0, -30,
+      `⏱️ Tiempo: ${timeString}\n⭐ Puntos: ${this.score.toLocaleString()}\n💎 Cristales: ${this.crystals}`,
+      {
+        fontFamily: '"JetBrains Mono", monospace',
+        fontSize: '16px',
+        color: '#ffffff',
+        align: 'center',
+        lineSpacing: 8
+      }
+    );
+    statsText.setOrigin(0.5);
+    
+    // Botón de reanudar
+    const resumeBtn = this.add.graphics();
+    resumeBtn.fillStyle(0x003333, 1);
+    resumeBtn.fillRoundedRect(-140, 40, 280, 50, 10);
+    resumeBtn.lineStyle(2, 0x00ffff, 1);
+    resumeBtn.strokeRoundedRect(-140, 40, 280, 50, 10);
+    
+    const resumeText = this.add.text(0, 65, '▶️ REANUDAR (ESC)', {
+      fontFamily: '"Orbitron", sans-serif',
+      fontSize: '18px',
+      color: '#00ffff'
+    });
+    resumeText.setOrigin(0.5);
+    
+    const resumeHitArea = this.add.rectangle(0, 65, 280, 50, 0x000000, 0);
+    resumeHitArea.setInteractive({ useHandCursor: true });
+    
+    resumeHitArea.on('pointerover', () => {
+      resumeBtn.clear();
+      resumeBtn.fillStyle(0x004444, 1);
+      resumeBtn.fillRoundedRect(-140, 40, 280, 50, 10);
+      resumeBtn.lineStyle(3, 0x00ffff, 1);
+      resumeBtn.strokeRoundedRect(-140, 40, 280, 50, 10);
+      resumeText.setScale(1.05);
+    });
+    
+    resumeHitArea.on('pointerout', () => {
+      resumeBtn.clear();
+      resumeBtn.fillStyle(0x003333, 1);
+      resumeBtn.fillRoundedRect(-140, 40, 280, 50, 10);
+      resumeBtn.lineStyle(2, 0x00ffff, 1);
+      resumeBtn.strokeRoundedRect(-140, 40, 280, 50, 10);
+      resumeText.setScale(1);
+    });
+    
+    resumeHitArea.on('pointerdown', () => {
+      this.resumeGame();
+    });
+    
+    // Botón de volver a la web
+    const exitBtn = this.add.graphics();
+    exitBtn.fillStyle(0x330011, 1);
+    exitBtn.fillRoundedRect(-140, 110, 280, 50, 10);
+    exitBtn.lineStyle(2, 0xff0066, 1);
+    exitBtn.strokeRoundedRect(-140, 110, 280, 50, 10);
+    
+    const exitText = this.add.text(0, 135, '🌐 VOLVER A LA WEB', {
+      fontFamily: '"Orbitron", sans-serif',
+      fontSize: '18px',
+      color: '#ff0066'
+    });
+    exitText.setOrigin(0.5);
+    
+    const exitHitArea = this.add.rectangle(0, 135, 280, 50, 0x000000, 0);
+    exitHitArea.setInteractive({ useHandCursor: true });
+    
+    exitHitArea.on('pointerover', () => {
+      exitBtn.clear();
+      exitBtn.fillStyle(0x550033, 1);
+      exitBtn.fillRoundedRect(-140, 110, 280, 50, 10);
+      exitBtn.lineStyle(3, 0xff0066, 1);
+      exitBtn.strokeRoundedRect(-140, 110, 280, 50, 10);
+      exitText.setScale(1.05);
+    });
+    
+    exitHitArea.on('pointerout', () => {
+      exitBtn.clear();
+      exitBtn.fillStyle(0x330011, 1);
+      exitBtn.fillRoundedRect(-140, 110, 280, 50, 10);
+      exitBtn.lineStyle(2, 0xff0066, 1);
+      exitBtn.strokeRoundedRect(-140, 110, 280, 50, 10);
+      exitText.setScale(1);
+    });
+    
+    exitHitArea.on('pointerdown', () => {
+      // Recargar la página para volver a la web normal
+      window.location.reload();
+    });
+    
+    this.pauseUI.add([bg, panel, pauseText, statsText, resumeBtn, resumeText, resumeHitArea, exitBtn, exitText, exitHitArea]);
     this.pauseUI.setVisible(false);
   }
   
@@ -1170,6 +1379,14 @@ export class MainScene extends Phaser.Scene {
       if (this.currentScreenInSection >= section.screens.length) {
         // Se completó toda la sección - mostrar footer de mejoras
         console.log('✅ Sección completada! Mostrando footer de mejoras...');
+        
+        // Rastrear sección completada
+        this.sectionsCompleted.push({
+          sectionId: section.id,
+          sectionName: section.name,
+          screensCompleted: section.screens.length
+        });
+        
         this.showUpgradeFooter();
       } else {
         // Hay más pantallas en esta sección - continuar
@@ -1279,6 +1496,15 @@ export class MainScene extends Phaser.Scene {
     // Comprar mejora
     this.crystals -= cost;
     this.upgradeLevels[upgradeKey]++;
+    
+    // Rastrear mejora comprada
+    const upgradeName = UPGRADES[upgradeKey].name;
+    const newLevel = this.upgradeLevels[upgradeKey];
+    this.upgradesPurchased.push({
+      name: upgradeName,
+      level: newLevel,
+      cost: cost
+    });
     
     console.log(`  ✅ Mejora comprada! Nuevo nivel: ${this.upgradeLevels[upgradeKey]}, cristales restantes: ${this.crystals}`);
     
@@ -1479,6 +1705,21 @@ export class MainScene extends Phaser.Scene {
   victory() {
     this.gameState = GAME_CONFIG.STATES.GAME_OVER;
     
+    // Rastrear tiempo de partida
+    this.gameEndTime = this.time.now;
+    
+    // Marcar todas las secciones como completadas si no están ya
+    this.sections.forEach((section, index) => {
+      const alreadyCompleted = this.sectionsCompleted.find(s => s.sectionId === section.id);
+      if (!alreadyCompleted) {
+        this.sectionsCompleted.push({
+          sectionId: section.id,
+          sectionName: section.name,
+          screensCompleted: section.screens.length
+        });
+      }
+    });
+    
     // Ocultar footer de mejoras
     this.hideUpgradeFooter();
     
@@ -1500,41 +1741,246 @@ export class MainScene extends Phaser.Scene {
     this.victoryUI = this.add.container(this.scale.width / 2, this.scale.height / 2);
     this.victoryUI.setDepth(200);
     
-    // Fondo
+    // Iconos de enemigos y mejoras
+    const enemyIcons = {
+      SCOUT: '🔵',
+      DRIFTER: '🟢',
+      TANK: '🟠',
+      SHOOTER: '🔴',
+      SWARM: '🟣'
+    };
+    
+    const upgradeIcons = {
+      'Daño de Balas': '⚔️',
+      'Cadencia de Disparo': '🔫',
+      'Disparo Doble': '⚡',
+      'Vida Máxima': '❤️',
+      'Cooldown de Misil': '⏱️',
+      'Misiles Extra': '🚀'
+    };
+    
+    // Fondo con efecto
     const bg = this.add.graphics();
-    bg.fillStyle(0x000000, 0.9);
+    bg.fillStyle(0x000000, 0.95);
     bg.fillRect(-this.scale.width / 2, -this.scale.height / 2, this.scale.width, this.scale.height);
     
-    // Texto de victoria
-    const victoryText = this.add.text(0, -100, '¡VICTORIA!', {
+    // Bordes decorativos
+    bg.lineStyle(3, 0x00ff00, 0.8);
+    bg.strokeRect(-this.scale.width / 2 + 20, -this.scale.height / 2 + 20, this.scale.width - 40, this.scale.height - 40);
+    bg.lineStyle(1, 0x00ff00, 0.3);
+    bg.strokeRect(-this.scale.width / 2 + 30, -this.scale.height / 2 + 30, this.scale.width - 60, this.scale.height - 60);
+    
+    // Partículas de fondo (estrellas)
+    for (let i = 0; i < 30; i++) {
+      const star = this.add.graphics();
+      const x = (Math.random() - 0.5) * this.scale.width * 0.9;
+      const y = (Math.random() - 0.5) * this.scale.height * 0.9;
+      star.fillStyle(0x00ff00, Math.random() * 0.5 + 0.2);
+      star.fillCircle(x, y, Math.random() * 2 + 1);
+      this.victoryUI.add(star);
+      
+      // Animación de parpadeo
+      this.tweens.add({
+        targets: star,
+        alpha: { from: 0.2, to: 0.8 },
+        duration: 1000 + Math.random() * 2000,
+        yoyo: true,
+        repeat: -1
+      });
+    }
+    
+    // Título de victoria con efecto de brillo
+    const victoryText = this.add.text(0, -260, '🏆 ¡VICTORIA! 🏆', {
       fontFamily: '"Orbitron", sans-serif',
-      fontSize: '48px',
+      fontSize: '52px',
       color: '#00ff00',
       stroke: '#003300',
-      strokeThickness: 4
+      strokeThickness: 6
     });
     victoryText.setOrigin(0.5);
     
-    // Calcular total de pantallas
-    const totalScreens = this.sections.reduce((total, section) => total + section.screens.length, 0);
+    // Efecto de pulso en el título
+    this.tweens.add({
+      targets: victoryText,
+      scale: { from: 1, to: 1.05 },
+      duration: 800,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
     
-    // Stats
-    const stats = this.add.text(0, 0,
-      `Score Final: ${this.score}\n` +
-      `Cristales: ${this.crystals}\n` +
-      `Enemigos: ${this.enemiesKilled}\n` +
-      `Pantallas: ${totalScreens}/${totalScreens}`,
+    // Calcular tiempo de partida
+    const gameTime = this.gameEndTime - this.gameStartTime;
+    const minutes = Math.floor(gameTime / 60000);
+    const seconds = Math.floor((gameTime % 60000) / 1000);
+    const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    
+    // Panel de estadísticas principales
+    const statsPanel = this.add.graphics();
+    const panelWidth = 500;
+    const panelHeight = 80;
+    const panelX = -panelWidth / 2;
+    const panelY = -180;
+    
+    statsPanel.fillStyle(0x003300, 0.6);
+    statsPanel.fillRoundedRect(panelX, panelY, panelWidth, panelHeight, 10);
+    statsPanel.lineStyle(2, 0x00ff00, 0.7);
+    statsPanel.strokeRoundedRect(panelX, panelY, panelWidth, panelHeight, 10);
+    
+    const mainStats = this.add.text(0, panelY + panelHeight / 2,
+      `⏱️ Tiempo: ${timeString}    ⭐ Puntos: ${this.score.toLocaleString()}    💎 Cristales: ${this.crystals}`,
       {
         fontFamily: '"JetBrains Mono", monospace',
-        fontSize: '18px',
+        fontSize: '16px',
         color: '#ffffff',
-        align: 'center'
+        align: 'center',
+        wordWrap: { width: panelWidth - 20 }
       }
     );
-    stats.setOrigin(0.5);
+    mainStats.setOrigin(0.5);
     
-    // Mensaje
-    const message = this.add.text(0, 100, '¡Gracias por explorar mi portfolio!', {
+    // === SECCIÓN DE ENEMIGOS ===
+    const enemiesY = -70;
+    const enemiesTitle = this.add.text(0, enemiesY, '👾 ENEMIGOS ELIMINADOS', {
+      fontFamily: '"Orbitron", sans-serif',
+      fontSize: '16px',
+      color: '#00ffff',
+      stroke: '#003333',
+      strokeThickness: 2
+    });
+    enemiesTitle.setOrigin(0.5);
+    
+    // Crear grid de enemigos con iconos
+    const enemyContainer = this.add.container(0, enemiesY + 40);
+    const enemyTypes = ['SCOUT', 'DRIFTER', 'TANK', 'SHOOTER', 'SWARM'];
+    const enemySpacing = 100;
+    const startX = -(enemyTypes.length - 1) * enemySpacing / 2;
+    
+    enemyTypes.forEach((type, index) => {
+      const x = startX + index * enemySpacing;
+      const count = this.enemiesKilledByType[type] || 0;
+      
+      // Icono del enemigo
+      const icon = this.add.text(x, 0, enemyIcons[type], { fontSize: '28px' });
+      icon.setOrigin(0.5);
+      
+      // Contador
+      const countText = this.add.text(x, 25, `${count}`, {
+        fontFamily: '"JetBrains Mono", monospace',
+        fontSize: '16px',
+        color: count > 0 ? '#ffffff' : '#666666',
+        fontStyle: count > 0 ? 'bold' : 'normal'
+      });
+      countText.setOrigin(0.5);
+      
+      enemyContainer.add([icon, countText]);
+    });
+    
+    // === SECCIÓN DE MEJORAS ===
+    const upgradesY = 50;
+    const upgradesTitle = this.add.text(0, upgradesY, '⚡ MEJORAS ADQUIRIDAS', {
+      fontFamily: '"Orbitron", sans-serif',
+      fontSize: '16px',
+      color: '#ff00ff',
+      stroke: '#330033',
+      strokeThickness: 2
+    });
+    upgradesTitle.setOrigin(0.5);
+    
+    // Crear grid de mejoras con iconos
+    const upgradeContainer = this.add.container(0, upgradesY + 40);
+    
+    if (this.upgradesPurchased.length > 0) {
+      const upgradeGroups = {};
+      this.upgradesPurchased.forEach(upgrade => {
+        if (!upgradeGroups[upgrade.name]) {
+          upgradeGroups[upgrade.name] = upgrade.level;
+        } else {
+          upgradeGroups[upgrade.name] = Math.max(upgradeGroups[upgrade.name], upgrade.level);
+        }
+      });
+      
+      const upgradeNames = Object.keys(upgradeGroups);
+      const upgradeSpacing = 90;
+      const startUpgradeX = -(upgradeNames.length - 1) * upgradeSpacing / 2;
+      
+      upgradeNames.forEach((name, index) => {
+        const x = startUpgradeX + index * upgradeSpacing;
+        const level = upgradeGroups[name];
+        const icon = upgradeIcons[name] || '✨';
+        
+        // Icono de la mejora
+        const iconText = this.add.text(x, 0, icon, { fontSize: '24px' });
+        iconText.setOrigin(0.5);
+        
+        // Nivel con barras
+        let levelBars = '';
+        for (let i = 0; i < level; i++) levelBars += '▮';
+        
+        const levelText = this.add.text(x, 22, levelBars, {
+          fontFamily: '"JetBrains Mono", monospace',
+          fontSize: '12px',
+          color: '#ff00ff'
+        });
+        levelText.setOrigin(0.5);
+        
+        upgradeContainer.add([iconText, levelText]);
+      });
+    } else {
+      const noUpgrades = this.add.text(0, 0, '— Ninguna —', {
+        fontFamily: '"JetBrains Mono", monospace',
+        fontSize: '14px',
+        color: '#666666'
+      });
+      noUpgrades.setOrigin(0.5);
+      upgradeContainer.add(noUpgrades);
+    }
+    
+    // === TIMELINE DE PROGRESO ===
+    const timelineY = 150;
+    const timelineTitle = this.add.text(0, timelineY, '📊 PROGRESO COMPLETO', {
+      fontFamily: '"Orbitron", sans-serif',
+      fontSize: '16px',
+      color: '#ffff00',
+      stroke: '#333300',
+      strokeThickness: 2
+    });
+    timelineTitle.setOrigin(0.5);
+    
+    // Crear timeline visual
+    const timelineContainer = this.add.container(0, timelineY + 35);
+    const timelineWidth = 500;
+    const sectionWidth = timelineWidth / this.sections.length;
+    
+    this.sections.forEach((section, index) => {
+      const x = -timelineWidth / 2 + sectionWidth * index + sectionWidth / 2;
+      
+      // Barra de progreso
+      const bar = this.add.graphics();
+      bar.fillStyle(0x00ff00, 1);
+      bar.fillRoundedRect(x - sectionWidth / 2 + 5, -8, sectionWidth - 10, 16, 4);
+      
+      // Checkmark
+      const check = this.add.text(x, 0, '✓', {
+        fontSize: '14px',
+        color: '#003300'
+      });
+      check.setOrigin(0.5);
+      
+      // Nombre de sección
+      const sectionName = this.add.text(x, 20, section.name, {
+        fontFamily: '"JetBrains Mono", monospace',
+        fontSize: '11px',
+        color: '#00ff00',
+        align: 'center'
+      });
+      sectionName.setOrigin(0.5);
+      
+      timelineContainer.add([bar, check, sectionName]);
+    });
+    
+    // Mensaje final
+    const message = this.add.text(0, timelineY + 80, '¡Gracias por explorar mi portfolio!', {
       fontFamily: '"JetBrains Mono", monospace',
       fontSize: '16px',
       color: '#00ffff'
@@ -1542,41 +1988,73 @@ export class MainScene extends Phaser.Scene {
     message.setOrigin(0.5);
     
     // Botón de reiniciar
-    const restartText = this.add.text(0, 160, '[ VOLVER A JUGAR ]', {
+    const restartBtn = this.add.graphics();
+    restartBtn.fillStyle(0x003300, 1);
+    restartBtn.fillRoundedRect(-120, timelineY + 115, 240, 50, 10);
+    restartBtn.lineStyle(2, 0x00ff00, 1);
+    restartBtn.strokeRoundedRect(-120, timelineY + 115, 240, 50, 10);
+    
+    const restartText = this.add.text(0, timelineY + 140, '🎮 VOLVER A JUGAR', {
       fontFamily: '"Orbitron", sans-serif',
-      fontSize: '20px',
-      color: '#00ff00',
-      stroke: '#003300',
-      strokeThickness: 2
+      fontSize: '18px',
+      color: '#00ff00'
     });
     restartText.setOrigin(0.5);
-    restartText.setInteractive({ useHandCursor: true });
     
-    restartText.on('pointerover', () => {
-      restartText.setScale(1.1);
+    // Hacer el área del botón interactiva
+    const hitArea = this.add.rectangle(0, timelineY + 140, 240, 50, 0x000000, 0);
+    hitArea.setInteractive({ useHandCursor: true });
+    
+    hitArea.on('pointerover', () => {
+      restartBtn.clear();
+      restartBtn.fillStyle(0x005500, 1);
+      restartBtn.fillRoundedRect(-120, timelineY + 115, 240, 50, 10);
+      restartBtn.lineStyle(3, 0x00ff00, 1);
+      restartBtn.strokeRoundedRect(-120, timelineY + 115, 240, 50, 10);
+      restartText.setScale(1.05);
     });
     
-    restartText.on('pointerout', () => {
+    hitArea.on('pointerout', () => {
+      restartBtn.clear();
+      restartBtn.fillStyle(0x003300, 1);
+      restartBtn.fillRoundedRect(-120, timelineY + 115, 240, 50, 10);
+      restartBtn.lineStyle(2, 0x00ff00, 1);
+      restartBtn.strokeRoundedRect(-120, timelineY + 115, 240, 50, 10);
       restartText.setScale(1);
     });
     
-    restartText.on('pointerdown', () => {
+    hitArea.on('pointerdown', () => {
       this.restartGame();
     });
     
-    this.victoryUI.add([bg, victoryText, stats, message, restartText]);
+    this.victoryUI.add([bg, statsPanel, victoryText, mainStats, enemiesTitle, enemyContainer, upgradesTitle, upgradeContainer, timelineTitle, timelineContainer, message, restartBtn, restartText, hitArea]);
     
-    // Animación
+    // Animación de entrada
     this.victoryUI.alpha = 0;
+    this.victoryUI.scale = 0.8;
     this.tweens.add({
       targets: this.victoryUI,
       alpha: 1,
-      duration: 500
+      scale: 1,
+      duration: 600,
+      ease: 'Back.easeOut'
     });
   }
   
   gameOver() {
     this.gameState = GAME_CONFIG.STATES.GAME_OVER;
+    
+    // Rastrear tiempo de partida y lugar de muerte
+    this.gameEndTime = this.time.now;
+    const currentSection = this.sections[this.currentSection];
+    if (currentSection) {
+      this.deathSection = {
+        id: currentSection.id,
+        name: currentSection.name,
+        screenIndex: this.currentScreenInSection,
+        totalScreens: currentSection.screens.length
+      };
+    }
     
     // Ocultar footer de mejoras
     this.hideUpgradeFooter();
@@ -1599,73 +2077,341 @@ export class MainScene extends Phaser.Scene {
     this.gameOverUI = this.add.container(this.scale.width / 2, this.scale.height / 2);
     this.gameOverUI.setDepth(200);
     
-    // Fondo
+    // Iconos de enemigos y mejoras
+    const enemyIcons = {
+      SCOUT: '🔵',
+      DRIFTER: '🟢',
+      TANK: '🟠',
+      SHOOTER: '🔴',
+      SWARM: '🟣'
+    };
+    
+    const upgradeIcons = {
+      'Daño de Balas': '⚔️',
+      'Cadencia de Disparo': '🔫',
+      'Disparo Doble': '⚡',
+      'Vida Máxima': '❤️',
+      'Cooldown de Misil': '⏱️',
+      'Misiles Extra': '🚀'
+    };
+    
+    // Fondo con efecto
     const bg = this.add.graphics();
-    bg.fillStyle(0x000000, 0.9);
+    bg.fillStyle(0x000000, 0.95);
     bg.fillRect(-this.scale.width / 2, -this.scale.height / 2, this.scale.width, this.scale.height);
     
-    // Texto
-    const style = {
+    // Bordes decorativos rojos
+    bg.lineStyle(3, 0xff0066, 0.8);
+    bg.strokeRect(-this.scale.width / 2 + 20, -this.scale.height / 2 + 20, this.scale.width - 40, this.scale.height - 40);
+    bg.lineStyle(1, 0xff0066, 0.3);
+    bg.strokeRect(-this.scale.width / 2 + 30, -this.scale.height / 2 + 30, this.scale.width - 60, this.scale.height - 60);
+    
+    // Partículas de fondo (fragmentos rojos)
+    for (let i = 0; i < 20; i++) {
+      const fragment = this.add.graphics();
+      const x = (Math.random() - 0.5) * this.scale.width * 0.9;
+      const y = (Math.random() - 0.5) * this.scale.height * 0.9;
+      fragment.fillStyle(0xff0066, Math.random() * 0.3 + 0.1);
+      fragment.fillCircle(x, y, Math.random() * 3 + 1);
+      this.gameOverUI.add(fragment);
+      
+      // Animación de caída
+      this.tweens.add({
+        targets: fragment,
+        y: fragment.y + 50,
+        alpha: 0,
+        duration: 2000 + Math.random() * 2000,
+        repeat: -1,
+        delay: Math.random() * 2000
+      });
+    }
+    
+    // Título de game over con efecto de shake
+    const gameOverText = this.add.text(0, -260, '💀 GAME OVER 💀', {
       fontFamily: '"Orbitron", sans-serif',
-      fontSize: '48px',
+      fontSize: '52px',
       color: '#ff0066',
       stroke: '#330022',
-      strokeThickness: 4
-    };
-    
-    const gameOverText = this.add.text(0, -80, 'GAME OVER', style);
+      strokeThickness: 6
+    });
     gameOverText.setOrigin(0.5);
     
-    // Stats
-    const statsStyle = {
-      fontFamily: '"JetBrains Mono", monospace',
-      fontSize: '18px',
-      color: '#ffffff',
-      align: 'center'
-    };
+    // Efecto de shake suave
+    this.tweens.add({
+      targets: gameOverText,
+      x: { from: -3, to: 3 },
+      duration: 100,
+      yoyo: true,
+      repeat: 3,
+      onComplete: () => {
+        gameOverText.x = 0;
+      }
+    });
     
-    // Calcular total de pantallas
-    const totalScreens = this.sections.reduce((total, section) => total + section.screens.length, 0);
-    const currentScreenNumber = this.sections.slice(0, this.currentSection).reduce((total, section) => total + section.screens.length, 0) + this.currentScreenInSection + 1;
+    // Calcular tiempo de partida
+    const gameTime = this.gameEndTime - this.gameStartTime;
+    const minutes = Math.floor(gameTime / 60000);
+    const seconds = Math.floor((gameTime % 60000) / 1000);
+    const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
     
-    const stats = this.add.text(0, 20,
-      `Score: ${this.score}\n` +
-      `Cristales: ${this.crystals}\n` +
-      `Enemigos: ${this.enemiesKilled}\n` +
-      `Pantalla: ${currentScreenNumber}/${totalScreens}`,
-      statsStyle
+    // Panel de estadísticas principales
+    const statsPanel = this.add.graphics();
+    const panelWidth = 500;
+    const panelHeight = 80;
+    const panelX = -panelWidth / 2;
+    const panelY = -180;
+    
+    statsPanel.fillStyle(0x330011, 0.6);
+    statsPanel.fillRoundedRect(panelX, panelY, panelWidth, panelHeight, 10);
+    statsPanel.lineStyle(2, 0xff0066, 0.7);
+    statsPanel.strokeRoundedRect(panelX, panelY, panelWidth, panelHeight, 10);
+    
+    const mainStats = this.add.text(0, panelY + panelHeight / 2,
+      `⏱️ Tiempo: ${timeString}    ⭐ Puntos: ${this.score.toLocaleString()}    💎 Cristales: ${this.crystals}`,
+      {
+        fontFamily: '"JetBrains Mono", monospace',
+        fontSize: '16px',
+        color: '#ffffff',
+        align: 'center',
+        wordWrap: { width: panelWidth - 20 }
+      }
     );
-    stats.setOrigin(0.5);
+    mainStats.setOrigin(0.5);
+    
+    // === SECCIÓN DE ENEMIGOS ===
+    const enemiesY = -70;
+    const enemiesTitle = this.add.text(0, enemiesY, '👾 ENEMIGOS ELIMINADOS', {
+      fontFamily: '"Orbitron", sans-serif',
+      fontSize: '16px',
+      color: '#00ffff',
+      stroke: '#003333',
+      strokeThickness: 2
+    });
+    enemiesTitle.setOrigin(0.5);
+    
+    // Crear grid de enemigos con iconos
+    const enemyContainer = this.add.container(0, enemiesY + 40);
+    const enemyTypes = ['SCOUT', 'DRIFTER', 'TANK', 'SHOOTER', 'SWARM'];
+    const enemySpacing = 100;
+    const startX = -(enemyTypes.length - 1) * enemySpacing / 2;
+    
+    enemyTypes.forEach((type, index) => {
+      const x = startX + index * enemySpacing;
+      const count = this.enemiesKilledByType[type] || 0;
+      
+      // Icono del enemigo
+      const icon = this.add.text(x, 0, enemyIcons[type], { fontSize: '28px' });
+      icon.setOrigin(0.5);
+      
+      // Contador
+      const countText = this.add.text(x, 25, `${count}`, {
+        fontFamily: '"JetBrains Mono", monospace',
+        fontSize: '16px',
+        color: count > 0 ? '#ffffff' : '#666666',
+        fontStyle: count > 0 ? 'bold' : 'normal'
+      });
+      countText.setOrigin(0.5);
+      
+      enemyContainer.add([icon, countText]);
+    });
+    
+    // === SECCIÓN DE MEJORAS ===
+    const upgradesY = 50;
+    const upgradesTitle = this.add.text(0, upgradesY, '⚡ MEJORAS ADQUIRIDAS', {
+      fontFamily: '"Orbitron", sans-serif',
+      fontSize: '16px',
+      color: '#ff00ff',
+      stroke: '#330033',
+      strokeThickness: 2
+    });
+    upgradesTitle.setOrigin(0.5);
+    
+    // Crear grid de mejoras con iconos
+    const upgradeContainer = this.add.container(0, upgradesY + 40);
+    
+    if (this.upgradesPurchased.length > 0) {
+      const upgradeGroups = {};
+      this.upgradesPurchased.forEach(upgrade => {
+        if (!upgradeGroups[upgrade.name]) {
+          upgradeGroups[upgrade.name] = upgrade.level;
+        } else {
+          upgradeGroups[upgrade.name] = Math.max(upgradeGroups[upgrade.name], upgrade.level);
+        }
+      });
+      
+      const upgradeNames = Object.keys(upgradeGroups);
+      const upgradeSpacing = 90;
+      const startUpgradeX = -(upgradeNames.length - 1) * upgradeSpacing / 2;
+      
+      upgradeNames.forEach((name, index) => {
+        const x = startUpgradeX + index * upgradeSpacing;
+        const level = upgradeGroups[name];
+        const icon = upgradeIcons[name] || '✨';
+        
+        // Icono de la mejora
+        const iconText = this.add.text(x, 0, icon, { fontSize: '24px' });
+        iconText.setOrigin(0.5);
+        
+        // Nivel con barras
+        let levelBars = '';
+        for (let i = 0; i < level; i++) levelBars += '▮';
+        
+        const levelText = this.add.text(x, 22, levelBars, {
+          fontFamily: '"JetBrains Mono", monospace',
+          fontSize: '12px',
+          color: '#ff00ff'
+        });
+        levelText.setOrigin(0.5);
+        
+        upgradeContainer.add([iconText, levelText]);
+      });
+    } else {
+      const noUpgrades = this.add.text(0, 0, '— Ninguna —', {
+        fontFamily: '"JetBrains Mono", monospace',
+        fontSize: '14px',
+        color: '#666666'
+      });
+      noUpgrades.setOrigin(0.5);
+      upgradeContainer.add(noUpgrades);
+    }
+    
+    // === TIMELINE DE PROGRESO CON PUNTO DE MUERTE ===
+    const timelineY = 150;
+    const timelineTitle = this.add.text(0, timelineY, '📊 PROGRESO', {
+      fontFamily: '"Orbitron", sans-serif',
+      fontSize: '16px',
+      color: '#ffff00',
+      stroke: '#333300',
+      strokeThickness: 2
+    });
+    timelineTitle.setOrigin(0.5);
+    
+    // Crear timeline visual
+    const timelineContainer = this.add.container(0, timelineY + 35);
+    const timelineWidth = 500;
+    const sectionWidth = timelineWidth / this.sections.length;
+    
+    this.sections.forEach((section, index) => {
+      const x = -timelineWidth / 2 + sectionWidth * index + sectionWidth / 2;
+      const isCompleted = this.sectionsCompleted.find(s => s.sectionId === section.id);
+      const isDeathSection = this.deathSection && this.deathSection.id === section.id;
+      
+      // Barra de progreso
+      const bar = this.add.graphics();
+      if (isCompleted) {
+        bar.fillStyle(0x00ff00, 1);
+      } else if (isDeathSection) {
+        bar.fillStyle(0xff0066, 1);
+      } else {
+        bar.fillStyle(0x333333, 1);
+      }
+      bar.fillRoundedRect(x - sectionWidth / 2 + 5, -8, sectionWidth - 10, 16, 4);
+      
+      // Indicador de estado
+      if (isCompleted) {
+        const check = this.add.text(x, 0, '✓', {
+          fontSize: '14px',
+          color: '#003300'
+        });
+        check.setOrigin(0.5);
+        timelineContainer.add(check);
+      } else if (isDeathSection) {
+        const skull = this.add.text(x, -25, '💀', { fontSize: '18px' });
+        skull.setOrigin(0.5);
+        timelineContainer.add(skull);
+        
+        // Efecto de pulso en el punto de muerte
+        this.tweens.add({
+          targets: bar,
+          alpha: { from: 0.6, to: 1 },
+          duration: 400,
+          yoyo: true,
+          repeat: -1
+        });
+      }
+      
+      // Nombre de sección
+      const sectionName = this.add.text(x, 20, section.name, {
+        fontFamily: '"JetBrains Mono", monospace',
+        fontSize: '11px',
+        color: isCompleted ? '#00ff00' : isDeathSection ? '#ff0066' : '#666666',
+        align: 'center'
+      });
+      sectionName.setOrigin(0.5);
+      
+      timelineContainer.add([bar, sectionName]);
+    });
+    
+    // Información de dónde murió
+    let deathInfo = '';
+    if (this.deathSection) {
+      const section = this.sections.find(s => s.id === this.deathSection.id);
+      if (section) {
+        const screenNum = this.deathSection.screenIndex + 1;
+        const totalScreens = section.screens.length;
+        deathInfo = `💀 Caíste en: ${this.deathSection.name} — Oleada ${screenNum}/${totalScreens}`;
+      }
+    }
+    
+    const deathInfoText = this.add.text(0, timelineY + 75, deathInfo, {
+      fontFamily: '"JetBrains Mono", monospace',
+      fontSize: '14px',
+      color: '#ff6699',
+      align: 'center'
+    });
+    deathInfoText.setOrigin(0.5);
     
     // Botón de reiniciar
-    const restartText = this.add.text(0, 120, '[ Click para reiniciar ]', {
-      fontFamily: '"JetBrains Mono", monospace',
-      fontSize: '20px',
-      color: '#00ffff'
+    const restartBtn = this.add.graphics();
+    restartBtn.fillStyle(0x330022, 1);
+    restartBtn.fillRoundedRect(-120, timelineY + 105, 240, 50, 10);
+    restartBtn.lineStyle(2, 0xff0066, 1);
+    restartBtn.strokeRoundedRect(-120, timelineY + 105, 240, 50, 10);
+    
+    const restartText = this.add.text(0, timelineY + 130, '🔄 REINTENTAR', {
+      fontFamily: '"Orbitron", sans-serif',
+      fontSize: '18px',
+      color: '#ff0066'
     });
     restartText.setOrigin(0.5);
-    restartText.setInteractive({ useHandCursor: true });
     
-    restartText.on('pointerover', () => {
-      restartText.setColor('#ffffff');
+    // Hacer el área del botón interactiva
+    const hitArea = this.add.rectangle(0, timelineY + 130, 240, 50, 0x000000, 0);
+    hitArea.setInteractive({ useHandCursor: true });
+    
+    hitArea.on('pointerover', () => {
+      restartBtn.clear();
+      restartBtn.fillStyle(0x550033, 1);
+      restartBtn.fillRoundedRect(-120, timelineY + 105, 240, 50, 10);
+      restartBtn.lineStyle(3, 0xff0066, 1);
+      restartBtn.strokeRoundedRect(-120, timelineY + 105, 240, 50, 10);
+      restartText.setScale(1.05);
     });
     
-    restartText.on('pointerout', () => {
-      restartText.setColor('#00ffff');
+    hitArea.on('pointerout', () => {
+      restartBtn.clear();
+      restartBtn.fillStyle(0x330022, 1);
+      restartBtn.fillRoundedRect(-120, timelineY + 105, 240, 50, 10);
+      restartBtn.lineStyle(2, 0xff0066, 1);
+      restartBtn.strokeRoundedRect(-120, timelineY + 105, 240, 50, 10);
+      restartText.setScale(1);
     });
     
-    restartText.on('pointerdown', () => {
+    hitArea.on('pointerdown', () => {
       this.restartGame();
     });
     
-    this.gameOverUI.add([bg, gameOverText, stats, restartText]);
+    this.gameOverUI.add([bg, statsPanel, gameOverText, mainStats, enemiesTitle, enemyContainer, upgradesTitle, upgradeContainer, timelineTitle, timelineContainer, deathInfoText, restartBtn, restartText, hitArea]);
     
     // Animación de entrada
     this.gameOverUI.alpha = 0;
+    this.gameOverUI.scale = 0.8;
     this.tweens.add({
       targets: this.gameOverUI,
       alpha: 1,
-      duration: 500
+      scale: 1,
+      duration: 600,
+      ease: 'Back.easeOut'
     });
   }
   
@@ -1714,6 +2460,25 @@ export class MainScene extends Phaser.Scene {
     this.enemiesKilled = 0;
     this.currentSection = 0;
     this.currentScreenInSection = 0;
+    
+    // Reset estadísticas detalladas
+    this.gameStartTime = 0;
+    this.gameEndTime = 0;
+    this.enemiesKilledByType = {
+      SCOUT: 0,
+      DRIFTER: 0,
+      TANK: 0,
+      SHOOTER: 0,
+      SWARM: 0
+    };
+    this.upgradesPurchased = [];
+    this.sectionsCompleted = [];
+    this.bulletsFired = 0;
+    this.bulletsHit = 0;
+    this.missilesFired = 0;
+    this.missilesHit = 0;
+    this.deathSection = null;
+    this.deathScreen = null;
     
     // Reset mejoras
     this.upgradeLevels = {
@@ -1780,6 +2545,7 @@ export class MainScene extends Phaser.Scene {
               missileData.targetY
             );
             this.missiles.add(missile);
+            this.missilesFired++;
             
             // Si es el último misil disparado, actualizar el tiempo para el cooldown
             // Esto permite que el cooldown empiece a contar desde el último disparo
@@ -1836,10 +2602,12 @@ export class MainScene extends Phaser.Scene {
         bulletData.forEach(data => {
           const bullet = new Bullet(this, data.x, data.y, data.angle, false, data.damage);
           this.playerBullets.add(bullet);
+          this.bulletsFired++;
         });
       } else {
         const bullet = new Bullet(this, bulletData.x, bulletData.y, bulletData.angle, false, bulletData.damage);
         this.playerBullets.add(bullet);
+        this.bulletsFired++;
       }
     }
     

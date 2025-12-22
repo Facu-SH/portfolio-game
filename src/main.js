@@ -184,74 +184,49 @@ function initCarousels() {
 // ============================================
 
 function initGameControls() {
-  const toggleBtn = document.getElementById('game-toggle');
+  const startGameAboutBtn = document.getElementById('start-game-about');
   const startBtn = document.getElementById('start-game-btn');
   
-  if (toggleBtn) {
-    // Estado inicial: juego deshabilitado
-    toggleBtn.classList.add('disabled');
-    toggleBtn.title = 'Activar juego';
-    
-    toggleBtn.addEventListener('click', () => {
+  // Botón de juego en la sección "Sobre mí"
+  if (startGameAboutBtn) {
+    startGameAboutBtn.addEventListener('click', () => {
       const mainScene = game.game?.scene?.getScene('MainScene');
       
       if (!game.isEnabled) {
         // Activando el juego
         game.toggle();
-        toggleBtn.classList.remove('disabled');
-        toggleBtn.title = 'Desactivar juego';
         
-        // Navegar a la primera sección (About Me)
-        const aboutLink = document.querySelector('.nav-link[data-page="about"]');
-        if (aboutLink) {
-          aboutLink.click();
-        }
-        
-        // Si el juego no está en IDLE, reiniciarlo
-        if (mainScene) {
-          if (mainScene.gameState !== 'IDLE') {
-            mainScene.restartGame();
-          }
-          // Mostrar el botón de inicio
-          if (startBtn) {
-            startBtn.classList.remove('hidden');
+        // Navegar a la primera sección (About Me) si no estamos ya ahí
+        const aboutPage = document.getElementById('page-about');
+        if (aboutPage && !aboutPage.classList.contains('active')) {
+          const aboutLink = document.querySelector('.nav-link[data-page="about"]');
+          if (aboutLink) {
+            aboutLink.click();
           }
         }
-      } else {
-        // Desactivando el juego
-        game.toggle();
-        toggleBtn.classList.add('disabled');
-        toggleBtn.title = 'Activar juego';
         
-        // Ocultar el footer de mejoras si está visible
-        const footer = document.getElementById('upgrade-footer');
-        if (footer) {
-          footer.classList.remove('visible');
-        }
-        
-        // Ocultar elementos del juego
-        if (mainScene) {
-          mainScene.setGameActive(false);
-          // Ocultar waveHUD
-          if (mainScene.waveHUD) {
-            mainScene.waveHUD.setVisible(false);
+        // Esperar un momento para que el juego se inicialice y luego iniciarlo
+        setTimeout(() => {
+          const scene = game.game?.scene?.getScene('MainScene');
+          if (scene) {
+            // Si el juego no está en IDLE, reiniciarlo primero
+            if (scene.gameState !== 'IDLE') {
+              scene.restartGame();
+            } else {
+              // Iniciar el juego directamente
+              scene.startGame();
+            }
           }
-        }
+        }, 200);
       }
     });
   }
   
+  // Ocultar el botón de inicio alternativo (ya no se usa)
   if (startBtn) {
-    startBtn.addEventListener('click', () => {
-      console.log('🚀 Botón de inicio presionado');
-      if (game.game && game.game.scene) {
-        const mainScene = game.game.scene.getScene('MainScene');
-        if (mainScene && mainScene.gameState === 'IDLE') {
-          mainScene.startGame();
-          startBtn.classList.add('hidden');
-        }
-      }
-    });
+    startBtn.classList.add('hidden');
+    // Asegurarse de que siempre esté oculto
+    startBtn.style.display = 'none';
   }
 }
 

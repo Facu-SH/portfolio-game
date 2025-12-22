@@ -39,6 +39,9 @@ export class Enemy extends Phaser.GameObjects.Container {
     
     scene.add.existing(this);
     
+    // Configurar depth para que esté visible
+    this.setDepth(10);
+    
     // Física
     scene.physics.add.existing(this);
     const bodySize = this.config.size * 0.4;
