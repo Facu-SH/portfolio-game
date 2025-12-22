@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portfolio | Dev Back-end & Videojuegos</title>
+  <meta name="description" content="Portfolio interactivo de desarrollador back-end y videojuegos con minijuego espacial integrado">
+  
+  <!-- Fuentes -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  </head>
+  <body>
+  <!-- Contenedor del juego (overlay) -->
+  <div id="game-container"></div>
+  
+  <!-- Toggle del juego -->
+  <button id="game-toggle" class="game-toggle" title="Activar/Desactivar juego">
+    🎮
+  </button>
+  
+  <!-- Botón de inicio del juego -->
+  <button id="start-game-btn" class="start-game-btn hidden">
+    🚀 Iniciar Juego
+  </button>
+
+  <!-- Badge de Space Commander (aparece al completar todo) -->
+  <div id="space-commander-badge" class="space-commander-badge">
+    <span>🚀</span>
+    <span>SPACE COMMANDER</span>
+    <span>🚀</span>
+  </div>
+
+  <!-- Navegación principal -->
+  <nav class="main-nav">
+    <div class="nav-logo">
+      <span class="logo-bracket">[</span>
+      <span class="logo-text">DEV</span>
+      <span class="logo-bracket">]</span>
+    </div>
+    <ul class="nav-links">
+      <li><a href="#" class="nav-link active" data-page="about">Sobre Mí<span class="conquest-badge">⭐</span></a></li>
+      <li><a href="#" class="nav-link" data-page="experience">Experiencia<span class="conquest-badge">⭐</span></a></li>
+      <li><a href="#" class="nav-link" data-page="portfolio">Portfolio<span class="conquest-badge">🏆</span></a></li>
+    </ul>
+  </nav>
+
+  <!-- Elementos decorativos (aparecen al conquistar zonas) -->
+  <div class="floating-ship ship-1" id="floating-ship-1">🛸</div>
+  <div class="floating-ship ship-2" id="floating-ship-2">🚀</div>
+  
+  <!-- Estrellas de fondo decorativas -->
+  <div class="conquest-stars" id="conquest-stars"></div>
+
+  <!-- Contenedor principal de páginas -->
+  <main id="app">
+    
+    <!-- ==================== PÁGINA: SOBRE MÍ ==================== -->
+    <section id="page-about" class="page active">
+      <div class="page-content">
+        <div class="about-hero">
+          <!-- Foto de perfil -->
+          <div class="profile-section">
+            <div class="profile-photo">
+              <div class="photo-frame">
+                <div class="photo-placeholder">
+                  <span class="photo-icon">👨‍💻</span>
+                </div>
+                <!-- Reemplazar con: <img src="tu-foto.jpg" alt="Tu nombre"> -->
+              </div>
+              <div class="photo-glow"></div>
+            </div>
+            
+            <!-- Redes sociales -->
+            <div class="social-links">
+              <a href="https://github.com" target="_blank" class="social-link" title="GitHub">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+              </a>
+              <a href="https://linkedin.com" target="_blank" class="social-link" title="LinkedIn">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+              </a>
+              <a href="https://itch.io" target="_blank" class="social-link" title="itch.io">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.13 1.338C2.08 1.96.02 4.328 0 4.95v1.03c0 1.303 1.22 2.45 2.325 2.45 1.33 0 2.436-1.102 2.436-2.41 0 1.308 1.07 2.41 2.4 2.41 1.328 0 2.362-1.102 2.362-2.41 0 1.308 1.137 2.41 2.466 2.41h.024c1.33 0 2.466-1.102 2.466-2.41 0 1.308 1.034 2.41 2.363 2.41 1.33 0 2.4-1.102 2.4-2.41 0 1.308 1.106 2.41 2.435 2.41C22.78 8.43 24 7.283 24 5.98V4.95c-.02-.62-2.082-2.99-3.13-3.612-3.253-.114-5.508-.134-8.87-.134-3.362 0-5.617.02-8.87.134zm6.59 6.686c-.334.39-.78.673-1.277.873a3.02 3.02 0 01-.755.19v7.498c.017 1.603-.483 2.053-1.18 2.922-.722.9-.482 1.792.34 1.792h.665c1.14 0 2.022-.584 2.33-1.792.403-1.59 1.395-2.252 2.125-2.72 1.395-.9 2.66-1.198 3.39-2.36.73 1.162 1.996 1.46 3.39 2.36.73.468 1.722 1.13 2.126 2.72.307 1.208 1.19 1.792 2.33 1.792h.664c.822 0 1.062-.892.34-1.792-.697-.869-1.197-1.32-1.18-2.922V9.087a3.02 3.02 0 01-.755-.19 2.94 2.94 0 01-1.276-.873c-.334.39-.78.673-1.276.873a2.82 2.82 0 01-2.39-.15 2.94 2.94 0 01-1.277.873c-.395.147-.813.2-1.23.16a3.15 3.15 0 01-1.23-.16 2.94 2.94 0 01-1.276-.873zm-.343 3.27c.767 0 1.913.502 1.913 1.626v2.046c0 1.123-1.146 1.626-1.913 1.626-.768 0-1.914-.503-1.914-1.626V12.92c0-1.124 1.146-1.626 1.914-1.626zm5.26 0c.767 0 1.913.502 1.913 1.626v2.046c0 1.123-1.146 1.626-1.914 1.626-.767 0-1.913-.503-1.913-1.626V12.92c0-1.124 1.146-1.626 1.913-1.626z"/></svg>
+              </a>
+              <a href="mailto:tu@email.com" class="social-link" title="Email">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 010 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z"/></svg>
+              </a>
+            </div>
+          </div>
+          
+          <!-- Información personal -->
+          <div class="about-info">
+            <div class="greeting">
+              <span class="wave">👋</span>
+              <span class="greeting-text">Hola, soy</span>
+            </div>
+            <h1 class="name">Tu Nombre</h1>
+            <h2 class="title">Desarrollador Back-end & Videojuegos</h2>
+            
+            <p class="bio">
+              Apasionado por crear experiencias interactivas y sistemas escalables. 
+              Combino mi amor por los videojuegos con la ingeniería de software 
+              para construir productos únicos que sorprenden y deleitan.
+            </p>
+            
+            <div class="quick-stats">
+              <div class="stat">
+                <span class="stat-number">5+</span>
+                <span class="stat-label">Años de experiencia</span>
+              </div>
+              <div class="stat">
+                <span class="stat-number">10+</span>
+                <span class="stat-label">Proyectos completados</span>
+              </div>
+              <div class="stat">
+                <span class="stat-number">3</span>
+                <span class="stat-label">Juegos publicados</span>
+              </div>
+            </div>
+
+            <div class="cta-buttons">
+              <a href="#" class="btn btn-primary" data-page="portfolio">Ver Portfolio</a>
+              <a href="#" class="btn btn-secondary" data-page="experience">Mi Experiencia</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== PÁGINA: EXPERIENCIA ==================== -->
+    <section id="page-experience" class="page">
+      <div class="page-content">
+        <header class="page-header">
+          <h1 class="page-title">Experiencia</h1>
+          <p class="page-subtitle">Mi trayectoria profesional y académica</p>
+        </header>
+
+        <div class="experience-container">
+          <!-- Timeline de Experiencia Laboral -->
+          <div class="experience-section">
+            <h2 class="section-title">
+              <span class="section-icon">💼</span>
+              Experiencia Laboral
+            </h2>
+            
+            <div class="timeline">
+              <div class="timeline-item">
+                <div class="timeline-marker"></div>
+                <div class="timeline-content">
+                  <span class="timeline-date">2022 - Presente</span>
+                  <h3 class="timeline-title">Senior Back-end Developer</h3>
+                  <p class="timeline-company">Empresa Tech · Remoto</p>
+                  <p class="timeline-description">
+                    Desarrollo de microservicios con Node.js y Python. 
+                    Arquitectura de sistemas distribuidos y APIs REST.
+                  </p>
+                  <div class="timeline-tags">
+                    <span class="tag">Node.js</span>
+                    <span class="tag">Python</span>
+                    <span class="tag">AWS</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="timeline-item">
+                <div class="timeline-marker"></div>
+                <div class="timeline-content">
+                  <span class="timeline-date">2020 - 2022</span>
+                  <h3 class="timeline-title">Full Stack Developer</h3>
+                  <p class="timeline-company">Startup XYZ · Ciudad</p>
+                  <p class="timeline-description">
+                    Desarrollo de aplicaciones web completas. 
+                    Implementación de sistemas de pago y autenticación.
+                  </p>
+                  <div class="timeline-tags">
+                    <span class="tag">React</span>
+                    <span class="tag">Express</span>
+                    <span class="tag">PostgreSQL</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="timeline-item">
+                <div class="timeline-marker"></div>
+                <div class="timeline-content">
+                  <span class="timeline-date">2018 - 2020</span>
+                  <h3 class="timeline-title">Junior Developer</h3>
+                  <p class="timeline-company">Agencia Digital · Ciudad</p>
+                  <p class="timeline-description">
+                    Desarrollo de sitios web y mantenimiento de servidores.
+                    Primeros pasos en desarrollo de videojuegos indie.
+                  </p>
+                  <div class="timeline-tags">
+                    <span class="tag">PHP</span>
+                    <span class="tag">MySQL</span>
+                    <span class="tag">Unity</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Timeline de Educación -->
+          <div class="experience-section">
+            <h2 class="section-title">
+              <span class="section-icon">🎓</span>
+              Educación
+            </h2>
+            
+            <div class="timeline">
+              <div class="timeline-item">
+                <div class="timeline-marker education"></div>
+                <div class="timeline-content">
+                  <span class="timeline-date">2014 - 2018</span>
+                  <h3 class="timeline-title">Ingeniería en Sistemas</h3>
+                  <p class="timeline-company">Universidad XYZ</p>
+                  <p class="timeline-description">
+                    Especialización en desarrollo de software y arquitectura de sistemas.
+                  </p>
+                </div>
+              </div>
+              
+              <div class="timeline-item">
+                <div class="timeline-marker education"></div>
+                <div class="timeline-content">
+                  <span class="timeline-date">2020</span>
+                  <h3 class="timeline-title">Game Development Bootcamp</h3>
+                  <p class="timeline-company">Plataforma Online</p>
+                  <p class="timeline-description">
+                    Curso intensivo de desarrollo de videojuegos con Unity y Godot.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Skills -->
+          <div class="experience-section skills-section">
+            <h2 class="section-title">
+              <span class="section-icon">⚡</span>
+              Habilidades
+            </h2>
+            
+            <div class="skills-grid">
+              <div class="skill-group">
+                <h3 class="skill-group-title">Lenguajes</h3>
+                <div class="skill-items">
+                  <span class="skill-item">JavaScript/TypeScript</span>
+                  <span class="skill-item">Python</span>
+                  <span class="skill-item">C#</span>
+                  <span class="skill-item">Go</span>
+                  <span class="skill-item">GDScript</span>
+                </div>
+              </div>
+              
+              <div class="skill-group">
+                <h3 class="skill-group-title">Backend</h3>
+                <div class="skill-items">
+                  <span class="skill-item">Node.js</span>
+                  <span class="skill-item">Express</span>
+                  <span class="skill-item">FastAPI</span>
+                  <span class="skill-item">PostgreSQL</span>
+                  <span class="skill-item">MongoDB</span>
+                  <span class="skill-item">Redis</span>
+                </div>
+              </div>
+              
+              <div class="skill-group">
+                <h3 class="skill-group-title">DevOps</h3>
+                <div class="skill-items">
+                  <span class="skill-item">Docker</span>
+                  <span class="skill-item">Kubernetes</span>
+                  <span class="skill-item">AWS</span>
+                  <span class="skill-item">CI/CD</span>
+                  <span class="skill-item">Linux</span>
+                </div>
+              </div>
+              
+              <div class="skill-group">
+                <h3 class="skill-group-title">Game Dev</h3>
+                <div class="skill-items">
+                  <span class="skill-item">Unity</span>
+                  <span class="skill-item">Godot</span>
+                  <span class="skill-item">Phaser</span>
+                  <span class="skill-item">Pixel Art</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== PÁGINA: PORTFOLIO ==================== -->
+    <section id="page-portfolio" class="page">
+      <div class="page-content">
+        <header class="page-header">
+          <h1 class="page-title">Portfolio</h1>
+          <p class="page-subtitle">Mis proyectos de videojuegos y desarrollo</p>
+        </header>
+
+        <!-- Filtros -->
+        <div class="portfolio-filters">
+          <button class="filter-btn active" data-filter="all">Todos</button>
+          <button class="filter-btn" data-filter="games">Videojuegos</button>
+          <button class="filter-btn" data-filter="backend">Backend</button>
+        </div>
+
+        <!-- Grid de proyectos -->
+        <div class="portfolio-grid">
+          
+          <!-- Proyecto 1 - Juego -->
+          <article class="portfolio-card" data-category="games">
+            <div class="card-media">
+              <div class="carousel">
+                <div class="carousel-slides">
+                  <div class="carousel-slide active">
+                    <div class="slide-placeholder">🚀</div>
+                    <!-- <img src="proyecto1-1.jpg" alt="Screenshot 1"> -->
+                  </div>
+                  <div class="carousel-slide">
+                    <div class="slide-placeholder">🎮</div>
+                  </div>
+                  <div class="carousel-slide">
+                    <div class="slide-placeholder">⭐</div>
+                  </div>
+                </div>
+                <button class="carousel-btn prev">‹</button>
+                <button class="carousel-btn next">›</button>
+                <div class="carousel-dots">
+                  <span class="dot active"></span>
+                  <span class="dot"></span>
+                  <span class="dot"></span>
+                </div>
+              </div>
+            </div>
+            <div class="card-body">
+              <span class="card-category">🎮 Videojuego</span>
+              <h3 class="card-title">Space Roguelike</h3>
+              <p class="card-description">
+                Roguelike espacial con generación procedural, combate bullet-hell 
+                y sistema de mejoras permanentes.
+              </p>
+              <div class="card-tags">
+                <span class="tag">Unity</span>
+                <span class="tag">C#</span>
+                <span class="tag">Procedural</span>
+              </div>
+              <div class="card-actions">
+                <a href="#" class="card-btn primary">🎮 Jugar</a>
+                <a href="#" class="card-btn secondary">📁 GitHub</a>
+              </div>
+            </div>
+          </article>
+
+          <!-- Proyecto 2 - Juego -->
+          <article class="portfolio-card" data-category="games">
+            <div class="card-media">
+              <div class="carousel">
+                <div class="carousel-slides">
+                  <div class="carousel-slide active">
+                    <div class="slide-placeholder">⚔️</div>
+                  </div>
+                  <div class="carousel-slide">
+                    <div class="slide-placeholder">🏰</div>
+                  </div>
+                </div>
+                <button class="carousel-btn prev">‹</button>
+                <button class="carousel-btn next">›</button>
+                <div class="carousel-dots">
+                  <span class="dot active"></span>
+                  <span class="dot"></span>
+                </div>
+              </div>
+            </div>
+            <div class="card-body">
+              <span class="card-category">🎮 Videojuego</span>
+              <h3 class="card-title">Dungeon Crawler</h3>
+              <p class="card-description">
+                RPG de acción con mazmorras generadas proceduralmente 
+                y sistema de loot aleatorio.
+              </p>
+              <div class="card-tags">
+                <span class="tag">Godot</span>
+                <span class="tag">GDScript</span>
+                <span class="tag">Pixel Art</span>
+              </div>
+              <div class="card-actions">
+                <a href="#" class="card-btn primary">🎮 Jugar</a>
+                <a href="#" class="card-btn secondary">📁 GitHub</a>
+              </div>
+            </div>
+          </article>
+
+          <!-- Proyecto 3 - Backend -->
+          <article class="portfolio-card" data-category="backend">
+            <div class="card-media">
+              <div class="carousel">
+                <div class="carousel-slides">
+                  <div class="carousel-slide active">
+                    <div class="slide-placeholder">🔗</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="card-body">
+              <span class="card-category">⚙️ Backend</span>
+              <h3 class="card-title">API Microservices</h3>
+              <p class="card-description">
+                Arquitectura de microservicios con Node.js, Docker y Kubernetes 
+                para alta disponibilidad.
+              </p>
+              <div class="card-tags">
+                <span class="tag">Node.js</span>
+                <span class="tag">Docker</span>
+                <span class="tag">K8s</span>
+              </div>
+              <div class="card-actions">
+                <a href="#" class="card-btn primary">📖 Docs</a>
+                <a href="#" class="card-btn secondary">📁 GitHub</a>
+              </div>
+            </div>
+          </article>
+
+          <!-- Proyecto 4 - Juego -->
+          <article class="portfolio-card" data-category="games">
+            <div class="card-media">
+              <div class="carousel">
+                <div class="carousel-slides">
+                  <div class="carousel-slide active">
+                    <div class="slide-placeholder">🧩</div>
+                  </div>
+                  <div class="carousel-slide">
+                    <div class="slide-placeholder">⏰</div>
+                  </div>
+                </div>
+                <button class="carousel-btn prev">‹</button>
+                <button class="carousel-btn next">›</button>
+                <div class="carousel-dots">
+                  <span class="dot active"></span>
+                  <span class="dot"></span>
+                </div>
+              </div>
+            </div>
+            <div class="card-body">
+              <span class="card-category">🎮 Videojuego</span>
+              <h3 class="card-title">Puzzle Platformer</h3>
+              <p class="card-description">
+                Plataformero con mecánicas de manipulación temporal 
+                y puzzles basados en física.
+              </p>
+              <div class="card-tags">
+                <span class="tag">Phaser</span>
+                <span class="tag">JavaScript</span>
+                <span class="tag">Web</span>
+              </div>
+              <div class="card-actions">
+                <a href="#" class="card-btn primary">🎮 Jugar</a>
+                <a href="#" class="card-btn secondary">📁 GitHub</a>
+              </div>
+            </div>
+          </article>
+
+          <!-- Proyecto 5 - Backend -->
+          <article class="portfolio-card" data-category="backend">
+            <div class="card-media">
+              <div class="carousel">
+                <div class="carousel-slides">
+                  <div class="carousel-slide active">
+                    <div class="slide-placeholder">💬</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="card-body">
+              <span class="card-category">⚙️ Backend</span>
+              <h3 class="card-title">Real-time Chat</h3>
+              <p class="card-description">
+                Sistema de chat en tiempo real con WebSockets, Redis 
+                y escalabilidad horizontal.
+              </p>
+              <div class="card-tags">
+                <span class="tag">WebSocket</span>
+                <span class="tag">Redis</span>
+                <span class="tag">PostgreSQL</span>
+              </div>
+              <div class="card-actions">
+                <a href="#" class="card-btn primary">🔴 Demo</a>
+                <a href="#" class="card-btn secondary">📁 GitHub</a>
+              </div>
+            </div>
+          </article>
+
+          <!-- Proyecto 6 - Backend -->
+          <article class="portfolio-card" data-category="backend">
+            <div class="card-media">
+              <div class="carousel">
+                <div class="carousel-slides">
+                  <div class="carousel-slide active">
+                    <div class="slide-placeholder">📊</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="card-body">
+              <span class="card-category">⚙️ Backend</span>
+              <h3 class="card-title">Analytics Pipeline</h3>
+              <p class="card-description">
+                Pipeline de datos con Apache Kafka para procesamiento 
+                en streaming y analíticas en tiempo real.
+              </p>
+              <div class="card-tags">
+                <span class="tag">Kafka</span>
+                <span class="tag">Python</span>
+                <span class="tag">ClickHouse</span>
+              </div>
+              <div class="card-actions">
+                <a href="#" class="card-btn primary">📖 Docs</a>
+                <a href="#" class="card-btn secondary">📁 GitHub</a>
+              </div>
+            </div>
+          </article>
+
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Scanlines CRT effect (opcional) -->
+  <div class="scanlines"></div>
+
+  <!-- Footer de mejoras -->
+  <footer id="upgrade-footer" class="upgrade-footer">
+    <div class="upgrade-footer-content">
+      <div class="upgrade-header">
+        <h2 class="upgrade-title">⚡ Mejora tu Nave</h2>
+        <div class="upgrade-crystals-display">
+          <span class="crystal-icon">💎</span>
+          <span class="upgrade-crystals">0</span>
+        </div>
+      </div>
+      
+      <div class="upgrade-grid">
+        <!-- Mejora de Daño de Balas -->
+        <button class="upgrade-btn" data-upgrade="BULLET_DAMAGE">
+          <div class="upgrade-icon">⚔️</div>
+          <div class="upgrade-info">
+            <h3 class="upgrade-name">Daño de Balas</h3>
+            <p class="upgrade-description">+20% daño por nivel</p>
+            <div class="upgrade-meta">
+              <span class="upgrade-level">0/3</span>
+              <span class="upgrade-cost">💎 25</span>
+            </div>
+          </div>
+        </button>
+        
+        <!-- Mejora de Cadencia de Disparo -->
+        <button class="upgrade-btn" data-upgrade="FIRE_RATE">
+          <div class="upgrade-icon">🔫</div>
+          <div class="upgrade-info">
+            <h3 class="upgrade-name">Cadencia</h3>
+            <p class="upgrade-description">+10% velocidad por nivel</p>
+            <div class="upgrade-meta">
+              <span class="upgrade-level">0/3</span>
+              <span class="upgrade-cost">💎 20</span>
+            </div>
+          </div>
+        </button>
+        
+        <!-- Mejora de Disparo Doble -->
+        <button class="upgrade-btn" data-upgrade="DOUBLE_SHOT">
+          <div class="upgrade-icon">⚡</div>
+          <div class="upgrade-info">
+            <h3 class="upgrade-name">Disparo Doble</h3>
+            <p class="upgrade-description">Dispara 2 balas paralelas</p>
+            <div class="upgrade-meta">
+              <span class="upgrade-level">0/1</span>
+              <span class="upgrade-cost">💎 50</span>
+            </div>
+          </div>
+        </button>
+        
+        <!-- Mejora de Vida Máxima -->
+        <button class="upgrade-btn" data-upgrade="MAX_HP">
+          <div class="upgrade-icon">❤️</div>
+          <div class="upgrade-info">
+            <h3 class="upgrade-name">Vida Máxima</h3>
+            <p class="upgrade-description">+20% vida por nivel</p>
+            <div class="upgrade-meta">
+              <span class="upgrade-level">0/3</span>
+              <span class="upgrade-cost">💎 30</span>
+            </div>
+          </div>
+        </button>
+        
+        <!-- Mejora de Cooldown de Misil -->
+        <button class="upgrade-btn" data-upgrade="MISSILE_COOLDOWN">
+          <div class="upgrade-icon">⏱️</div>
+          <div class="upgrade-info">
+            <h3 class="upgrade-name">Recarga Misil</h3>
+            <p class="upgrade-description">-15% cooldown por nivel</p>
+            <div class="upgrade-meta">
+              <span class="upgrade-level">0/3</span>
+              <span class="upgrade-cost">💎 35</span>
+            </div>
+          </div>
+        </button>
+        
+        <!-- Mejora de Cantidad de Misiles -->
+        <button class="upgrade-btn" data-upgrade="MISSILE_COUNT">
+          <div class="upgrade-icon">🚀</div>
+          <div class="upgrade-info">
+            <h3 class="upgrade-name">Misil Extra</h3>
+            <p class="upgrade-description">Carga 2 misiles</p>
+            <div class="upgrade-meta">
+              <span class="upgrade-level">0/1</span>
+              <span class="upgrade-cost">💎 60</span>
+            </div>
+          </div>
+        </button>
+      </div>
+      
+      <div class="upgrade-footer-actions">
+        <button id="proceed-next-section" class="proceed-btn">
+          Continuar → Siguiente Sección
+        </button>
+      </div>
+    </div>
+  </footer>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
