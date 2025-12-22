@@ -9,7 +9,7 @@ export const UPGRADES = {
     icon: '⚔️',
     baseValue: 10,
     maxLevel: 3,
-    costFormula: (level) => [25, 45, 70][level] || Infinity,
+    costFormula: (level) => [250, 450, 700][level] || Infinity,
     valueFormula: (level) => Math.floor(10 * (1 + 0.2 * level)), // 10 → 12 → 14 → 16
     description: (level) => {
       const nextValue = Math.floor(10 * (1 + 0.2 * (level + 1)));
@@ -23,7 +23,7 @@ export const UPGRADES = {
     icon: '🔫',
     baseValue: 200, // ms entre disparos
     maxLevel: 3,
-    costFormula: (level) => [20, 40, 65][level] || Infinity,
+    costFormula: (level) => [200, 400, 650][level] || Infinity,
     // Reduce el tiempo entre disparos en 10% cada nivel
     valueFormula: (level) => Math.floor(200 * Math.pow(0.9, level)), // 200 → 180 → 162 → 146
     description: (level) => {
@@ -38,7 +38,7 @@ export const UPGRADES = {
     icon: '⚡',
     baseValue: 1,
     maxLevel: 1,
-    costFormula: (level) => [50][level] || Infinity,
+    costFormula: (level) => [500][level] || Infinity,
     valueFormula: (level) => 1 + level, // 1 → 2 balas
     description: () => `Dispara 2 balas paralelas`
   },
@@ -49,7 +49,7 @@ export const UPGRADES = {
     icon: '❤️',
     baseValue: 100,
     maxLevel: 3,
-    costFormula: (level) => [30, 50, 75][level] || Infinity,
+    costFormula: (level) => [300, 500, 750][level] || Infinity,
     valueFormula: (level) => Math.floor(100 * (1 + 0.2 * level)), // 100 → 120 → 144 → 172
     description: (level) => {
       const nextValue = Math.floor(100 * (1 + 0.2 * (level + 1)));
@@ -63,7 +63,7 @@ export const UPGRADES = {
     icon: '⏱️',
     baseValue: 2500,
     maxLevel: 3,
-    costFormula: (level) => [35, 55, 80][level] || Infinity,
+    costFormula: (level) => [350, 550, 800][level] || Infinity,
     // Reduce el cooldown en 15% cada nivel
     valueFormula: (level) => Math.floor(2500 * Math.pow(0.85, level)), // 2500 → 2125 → 1806 → 1535
     description: (level) => {
@@ -78,7 +78,7 @@ export const UPGRADES = {
     icon: '🚀',
     baseValue: 1,
     maxLevel: 1,
-    costFormula: (level) => [60][level] || Infinity,
+    costFormula: (level) => [600][level] || Infinity,
     valueFormula: (level) => 1 + level, // 1 → 2 misiles
     description: () => `Carga 2 misiles`
   }
@@ -132,15 +132,15 @@ export function getTotalUpgradeCost() {
 /*
 === ANÁLISIS DE ECONOMÍA ===
 
-Costos totales de mejoras:
-- Daño de Balas (3 niveles): 25 + 45 + 70 = 140
-- Cadencia de Disparo (3 niveles): 20 + 40 + 65 = 125
-- Disparo Doble (1 nivel): 50
-- Vida Máxima (3 niveles): 30 + 50 + 75 = 155
-- Cooldown de Misil (3 niveles): 35 + 55 + 80 = 170
-- Misiles Extra (1 nivel): 60
+Costos totales de mejoras (x10):
+- Daño de Balas (3 niveles): 250 + 450 + 700 = 1,400
+- Cadencia de Disparo (3 niveles): 200 + 400 + 650 = 1,250
+- Disparo Doble (1 nivel): 500
+- Vida Máxima (3 niveles): 300 + 500 + 750 = 1,550
+- Cooldown de Misil (3 niveles): 350 + 550 + 800 = 1,700
+- Misiles Extra (1 nivel): 600
 
-TOTAL: 700 cristales para todas las mejoras
+TOTAL: 7,000 cristales para todas las mejoras
 
 Cristales por enemigo:
 - SCOUT: 1 cristal (5 puntos)
@@ -156,6 +156,6 @@ Estimación por sección:
 
 Total estimado: 480-650 cristales
 
-Resultado: El jugador puede comprar ~70-90% de las mejoras, 
-obligándolo a elegir estratégicamente qué mejorar.
+Resultado: Con los precios x10, el jugador solo podrá comprar ~7-9% de las mejoras,
+haciendo que las decisiones sean MUY estratégicas y que cada mejora sea significativa.
 */

@@ -3,6 +3,7 @@ import { GAME_CONFIG } from '../config/gameConfig.js';
 import { Player } from '../entities/Player.js';
 import { Enemy } from '../entities/Enemy.js';
 import { Spawner } from '../entities/Spawner.js';
+import { Boss } from '../entities/Boss.js';
 import { Bullet, Missile } from '../entities/Projectile.js';
 import { Crystal, HealthDrop } from '../entities/Collectible.js';
 import { UPGRADES, UPGRADE_ORDER, getUpgradeCost, getUpgradeValue } from '../config/upgrades.js';
@@ -63,11 +64,23 @@ export class MainScene extends Phaser.Scene {
           { difficulty: 'hard', spawnerCount: 3 },
           { difficulty: 'hard', spawnerCount: 4 }
         ]
+      },
+      {
+        id: 'boss',
+        name: 'JEFE FINAL',
+        pageId: 'portfolio', // Mantener en la página de portfolio
+        screens: [
+          { difficulty: 'boss', spawnerCount: 0, isBoss: true }
+        ]
       }
     ];
     
     this.currentSection = 0;
     this.currentScreenInSection = 0;
+    
+    // Sistema de jefe
+    this.boss = null;
+    this.isBossFight = false;
   }
   
   create() {
@@ -316,6 +329,14 @@ export class MainScene extends Phaser.Scene {
           spawner.takeDamage(damage);
         }
       });
+      
+      // Dañar al jefe en el área (el daño AOE puede atravesar escudos)
+      if (this.boss && !this.boss.isDestroyed) {
+        const bossDistance = Phaser.Math.Distance.Between(x, y, this.boss.x, this.boss.y);
+        if (bossDistance <= radius + this.boss.size * 0.4) {
+          this.boss.takeDamage(damage);
+        }
+      }
     });
     
     // Muerte del jugador
@@ -436,6 +457,82 @@ export class MainScene extends Phaser.Scene {
         this.collectHealth(this.player, health);
       }
     });
+    
+    // Colisiones con el jefe (si está activo)
+    if (this.boss && !this.boss.isDestroyed) {
+      // Balas del jugador vs jefe (verificar escudos primero)
+      this.playerBullets.getChildren().forEach(bullet => {
+        if (!bullet.active) return;
+        
+        // Verificar si la bala choca con un escudo
+        if (this.boss.checkShieldCollision(bullet.x, bullet.y, 5)) {
+          // Bala bloqueada por escudo - crear efecto visual
+          this.createShieldBlockEffect(bullet.x, bullet.y);
+          bullet.destroy();
+          return;
+        }
+        
+        // Verificar si la bala choca con el jefe
+        const dist = Phaser.Math.Distance.Between(bullet.x, bullet.y, this.boss.x, this.boss.y);
+        if (dist < this.boss.size * 0.4) {
+          bullet.destroy();
+          this.boss.takeDamage(bullet.damage);
+        }
+      });
+      
+      // Misiles vs jefe
+      this.missiles.getChildren().forEach(missile => {
+        if (!missile || !missile.active || missile.hasExploded || !missile.scene) return;
+        
+        // Los misiles también pueden ser bloqueados por escudos
+        if (this.boss.checkShieldCollision(missile.x, missile.y, 10)) {
+          this.createShieldBlockEffect(missile.x, missile.y);
+          missile.explode(); // Explota al chocar con escudo
+          return;
+        }
+        
+        // Verificar si el misil choca con el jefe
+        const dist = Phaser.Math.Distance.Between(missile.x, missile.y, this.boss.x, this.boss.y);
+        if (dist < this.boss.size * 0.4 + 10) {
+          missile.explode();
+          this.boss.takeDamage(GAME_CONFIG.PLAYER.MISSILE_DAMAGE);
+        }
+      });
+      
+      // Jugador vs jefe (colisión directa)
+      const bossPlayerDist = Phaser.Math.Distance.Between(this.boss.x, this.boss.y, playerX, playerY);
+      if (bossPlayerDist < playerRadius + this.boss.size * 0.4) {
+        if (!this.player.isInvulnerable) {
+          this.player.takeDamage(GAME_CONFIG.DAMAGE.COLLISION * 2); // Más daño por chocar con el jefe
+          this.updateHUD();
+        }
+      }
+      
+      // Jugador vs escudos del jefe
+      if (this.boss.checkShieldCollision(playerX, playerY, playerRadius)) {
+        if (!this.player.isInvulnerable) {
+          this.player.takeDamage(GAME_CONFIG.DAMAGE.COLLISION);
+          this.updateHUD();
+        }
+      }
+    }
+  }
+  
+  createShieldBlockEffect(x, y) {
+    const effect = this.add.graphics();
+    effect.setPosition(x, y);
+    effect.fillStyle(0x00ffff, 1);
+    effect.fillCircle(0, 0, 10);
+    effect.lineStyle(2, 0x00ffff, 1);
+    effect.strokeCircle(0, 0, 15);
+    
+    this.tweens.add({
+      targets: effect,
+      alpha: 0,
+      scale: 2,
+      duration: 200,
+      onComplete: () => effect.destroy()
+    });
   }
   
   missileHitEnemy(missile, enemy) {
@@ -541,8 +638,90 @@ export class MainScene extends Phaser.Scene {
     this.waveHUD.add([waveBg, this.waveText]);
     this.waveHUD.setVisible(false); // Oculto hasta que inicie el juego
     
+    // Barra de vida del jefe (parte inferior de la pantalla)
+    this.bossHealthContainer = this.add.container(this.scale.width / 2, this.scale.height - 60);
+    this.bossHealthContainer.setDepth(100);
+    
+    const bossBarWidth = 500;
+    const bossBarHeight = 30;
+    
+    // Fondo de la barra
+    const bossBarBg = this.add.graphics();
+    bossBarBg.fillStyle(0x000000, 0.8);
+    bossBarBg.fillRoundedRect(-bossBarWidth / 2 - 10, -bossBarHeight / 2 - 20, bossBarWidth + 20, bossBarHeight + 40, 8);
+    bossBarBg.lineStyle(2, 0xff0066, 0.8);
+    bossBarBg.strokeRoundedRect(-bossBarWidth / 2 - 10, -bossBarHeight / 2 - 20, bossBarWidth + 20, bossBarHeight + 40, 8);
+    
+    // Nombre del jefe
+    this.bossNameText = this.add.text(0, -bossBarHeight / 2 - 10, '⚠️ GUARDIÁN DEL CÓDIGO ⚠️', {
+      fontFamily: '"Orbitron", sans-serif',
+      fontSize: '16px',
+      color: '#ff0066',
+      stroke: '#330022',
+      strokeThickness: 2
+    });
+    this.bossNameText.setOrigin(0.5, 1);
+    
+    // Barra de fondo
+    const bossHpBarBg = this.add.graphics();
+    bossHpBarBg.fillStyle(0x330011, 1);
+    bossHpBarBg.fillRect(-bossBarWidth / 2, -bossBarHeight / 2, bossBarWidth, bossBarHeight);
+    
+    // Barra de vida
+    this.bossHpBar = this.add.graphics();
+    this.bossHpBarWidth = bossBarWidth;
+    this.bossHpBarHeight = bossBarHeight;
+    
+    // Texto de HP
+    this.bossHpText = this.add.text(0, 0, '2000 / 2000', {
+      fontFamily: '"JetBrains Mono", monospace',
+      fontSize: '14px',
+      color: '#ffffff',
+      stroke: '#000000',
+      strokeThickness: 2
+    });
+    this.bossHpText.setOrigin(0.5);
+    
+    this.bossHealthContainer.add([bossBarBg, this.bossNameText, bossHpBarBg, this.bossHpBar, this.bossHpText]);
+    this.bossHealthContainer.setVisible(false);
+    
     // Ocultar HUD en IDLE
     this.hudContainer.setVisible(false);
+  }
+  
+  updateBossHealthBar() {
+    if (!this.boss || !this.bossHpBar) return;
+    
+    const hpPercent = this.boss.hp / this.boss.maxHp;
+    
+    // Color basado en fase
+    let hpColor;
+    if (hpPercent > 0.6) {
+      hpColor = 0xff0066; // Rosa
+    } else if (hpPercent > 0.3) {
+      hpColor = 0xff6600; // Naranja
+    } else {
+      hpColor = 0xff0000; // Rojo
+    }
+    
+    this.bossHpBar.clear();
+    this.bossHpBar.fillStyle(hpColor, 1);
+    this.bossHpBar.fillRect(
+      -this.bossHpBarWidth / 2, 
+      -this.bossHpBarHeight / 2, 
+      this.bossHpBarWidth * hpPercent, 
+      this.bossHpBarHeight
+    );
+    
+    // Efecto de brillo pulsante cuando está bajo de vida
+    if (hpPercent <= 0.3) {
+      const pulse = 0.7 + Math.sin(this.time.now * 0.01) * 0.3;
+      this.bossHpBar.alpha = pulse;
+    } else {
+      this.bossHpBar.alpha = 1;
+    }
+    
+    this.bossHpText.setText(`${this.boss.hp} / ${this.boss.maxHp}`);
   }
   
   updateHUD() {
@@ -637,6 +816,12 @@ export class MainScene extends Phaser.Scene {
     const screen = section.screens[this.currentScreenInSection];
     if (!screen) return;
     
+    // Verificar si es pelea de jefe
+    if (screen.isBoss) {
+      this.startBossFight();
+      return;
+    }
+    
     const spawnerCount = screen.spawnerCount;
     const difficulty = screen.difficulty;
     
@@ -658,6 +843,110 @@ export class MainScene extends Phaser.Scene {
     
     // Actualizar HUD de oleada
     this.updateWaveHUD();
+  }
+  
+  startBossFight() {
+    console.log('🔥 ¡INICIANDO PELEA DE JEFE!');
+    
+    this.isBossFight = true;
+    
+    // Limpiar enemigos y spawners existentes
+    this.enemies.clear(true, true);
+    this.spawners.clear(true, true);
+    
+    // Mostrar advertencia
+    this.showBossWarning();
+    
+    // Crear el jefe después de la advertencia
+    this.time.delayedCall(2000, () => {
+      // Posición inicial del jefe (centro superior)
+      const bossX = this.scale.width / 2;
+      const bossY = 200;
+      
+      this.boss = new Boss(this, bossX, bossY);
+      
+      // Mostrar barra de vida del jefe
+      this.bossHealthContainer.setVisible(true);
+      this.updateBossHealthBar();
+      
+      // Evento cuando el jefe muere
+      this.events.once('bossDefeated', () => {
+        this.onBossDefeated();
+      });
+    });
+    
+    // Actualizar HUD
+    if (this.waveText) {
+      this.waveText.setText('⚠️ JEFE FINAL ⚠️');
+    }
+  }
+  
+  showBossWarning() {
+    // Fondo oscuro
+    const warningBg = this.add.graphics();
+    warningBg.fillStyle(0x000000, 0.7);
+    warningBg.fillRect(0, 0, this.scale.width, this.scale.height);
+    warningBg.setDepth(90);
+    
+    // Texto de advertencia
+    const warningText = this.add.text(
+      this.scale.width / 2,
+      this.scale.height / 2,
+      '⚠️ PELIGRO ⚠️\n\nGUARDIÁN DEL CÓDIGO\nSE APROXIMA',
+      {
+        fontFamily: '"Orbitron", sans-serif',
+        fontSize: '36px',
+        color: '#ff0066',
+        stroke: '#330022',
+        strokeThickness: 4,
+        align: 'center'
+      }
+    );
+    warningText.setOrigin(0.5);
+    warningText.setDepth(91);
+    
+    // Efecto de parpadeo
+    this.tweens.add({
+      targets: warningText,
+      alpha: 0.3,
+      duration: 200,
+      yoyo: true,
+      repeat: 5
+    });
+    
+    // Shake de cámara
+    this.cameras.main.shake(1500, 0.01);
+    
+    // Desvanecer después de 2 segundos
+    this.time.delayedCall(1800, () => {
+      this.tweens.add({
+        targets: [warningBg, warningText],
+        alpha: 0,
+        duration: 200,
+        onComplete: () => {
+          warningBg.destroy();
+          warningText.destroy();
+        }
+      });
+    });
+  }
+  
+  onBossDefeated() {
+    console.log('🏆 ¡JEFE DERROTADO! ¡VICTORIA!');
+    
+    this.isBossFight = false;
+    this.boss = null;
+    
+    // Ocultar barra de vida del jefe
+    this.bossHealthContainer.setVisible(false);
+    
+    // Magnetizar todos los collectibles
+    this.magnetizeAllCollectibles();
+    
+    // Esperar a que se recojan los cristales
+    this.time.delayedCall(2000, () => {
+      this.victory();
+    });
   }
   
   showScreenTitle(sectionName, currentWave, totalWaves) {
@@ -1297,6 +1586,11 @@ export class MainScene extends Phaser.Scene {
       this.waveHUD.setVisible(false);
     }
     
+    // Ocultar barra de vida del jefe
+    if (this.bossHealthContainer) {
+      this.bossHealthContainer.setVisible(false);
+    }
+    
     // Crear UI de game over
     this.createGameOverUI();
   }
@@ -1388,6 +1682,18 @@ export class MainScene extends Phaser.Scene {
     
     // Ocultar footer de mejoras
     this.hideUpgradeFooter();
+    
+    // Destruir jefe si existe
+    if (this.boss) {
+      this.boss.destroy();
+      this.boss = null;
+    }
+    this.isBossFight = false;
+    
+    // Ocultar barra de vida del jefe
+    if (this.bossHealthContainer) {
+      this.bossHealthContainer.setVisible(false);
+    }
     
     // Limpiar grupos
     this.enemies.clear(true, true);
@@ -1549,8 +1855,18 @@ export class MainScene extends Phaser.Scene {
       }
     });
     
-    // Verificar periódicamente si todos los spawners están destruidos
-    if (this.spawners.getChildren().length > 0) {
+    // Actualizar jefe (si está activo)
+    if (this.boss && !this.boss.isDestroyed) {
+      this.boss.update(time, delta);
+      
+      // Actualizar barra de vida del jefe periódicamente
+      if (time % 100 < 20) {
+        this.updateBossHealthBar();
+      }
+    }
+    
+    // Verificar periódicamente si todos los spawners están destruidos (solo si no es pelea de jefe)
+    if (!this.isBossFight && this.spawners.getChildren().length > 0) {
       const activeSpawners = this.spawners.getChildren().filter(s => s.active && !s.isDestroyed);
       if (activeSpawners.length === 0 && !this.screenCompleted) {
         console.log('✅ Verificación periódica: Todos los spawners destruidos');
