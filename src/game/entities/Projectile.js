@@ -169,58 +169,58 @@ export class Missile extends Phaser.GameObjects.Container {
     const aoeRadius = this.aoeRadius;
     const aoeDamage = this.aoeDamage;
     
-    // Crear explosión visual
-    if (this.scene && this.scene.add) {
-      const explosion = this.scene.add.graphics();
-      explosion.setPosition(explosionX, explosionY);
-      
-      // Animación de explosión
-      let frame = 0;
-      const maxFrames = 15;
-      
-      if (this.scene.time) {
-        const explosionTimer = this.scene.time.addEvent({
-          delay: 30,
-          callback: () => {
-            if (!explosion || !explosion.active) return;
-            
-            explosion.clear();
-            
-            const progress = frame / maxFrames;
-            const radius = aoeRadius * progress;
-            const alpha = 1 - progress;
-            
-            // Círculo exterior
-            explosion.fillStyle(GAME_CONFIG.COLORS.MAGENTA, alpha * 0.5);
-            explosion.fillCircle(0, 0, radius);
-            
-            // Círculo interior
-            explosion.fillStyle(GAME_CONFIG.COLORS.ORANGE, alpha * 0.8);
-            explosion.fillCircle(0, 0, radius * 0.6);
-            
-            // Centro brillante
-            explosion.fillStyle(0xffffff, alpha);
-            explosion.fillCircle(0, 0, radius * 0.2);
-            
-            frame++;
-            if (frame >= maxFrames) {
-              if (explosionTimer) explosionTimer.destroy();
-              if (explosion && explosion.active) explosion.destroy();
-            }
-          },
-          repeat: maxFrames - 1
-        });
+    // Usar el sistema de explosión mejorado si está disponible
+    if (this.scene.createExplosion) {
+      this.scene.createExplosion(explosionX, explosionY, aoeRadius, GAME_CONFIG.COLORS.MAGENTA);
+    } else {
+      // Fallback: explosión básica
+      if (this.scene && this.scene.add) {
+        const explosion = this.scene.add.graphics();
+        explosion.setPosition(explosionX, explosionY);
+        
+        // Animación de explosión
+        let frame = 0;
+        const maxFrames = 15;
+        
+        if (this.scene.time) {
+          const explosionTimer = this.scene.time.addEvent({
+            delay: 30,
+            callback: () => {
+              if (!explosion || !explosion.active) return;
+              
+              explosion.clear();
+              
+              const progress = frame / maxFrames;
+              const radius = aoeRadius * progress;
+              const alpha = 1 - progress;
+              
+              // Círculo exterior
+              explosion.fillStyle(GAME_CONFIG.COLORS.MAGENTA, alpha * 0.5);
+              explosion.fillCircle(0, 0, radius);
+              
+              // Círculo interior
+              explosion.fillStyle(GAME_CONFIG.COLORS.ORANGE, alpha * 0.8);
+              explosion.fillCircle(0, 0, radius * 0.6);
+              
+              // Centro brillante
+              explosion.fillStyle(0xffffff, alpha);
+              explosion.fillCircle(0, 0, radius * 0.2);
+              
+              frame++;
+              if (frame >= maxFrames) {
+                if (explosionTimer) explosionTimer.destroy();
+                if (explosion && explosion.active) explosion.destroy();
+              }
+            },
+            repeat: maxFrames - 1
+          });
+        }
       }
     }
     
     // Emitir evento de explosión para dañar enemigos en el área
     if (this.scene && this.scene.events) {
       this.scene.events.emit('missileExplosion', explosionX, explosionY, aoeRadius, aoeDamage);
-    }
-    
-    // Screen shake
-    if (this.scene && this.scene.cameras && this.scene.cameras.main) {
-      this.scene.cameras.main.shake(150, 0.015);
     }
     
     // Destruir el misil

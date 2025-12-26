@@ -100,6 +100,526 @@ export class MainScene extends Phaser.Scene {
     // Sistema de jefe
     this.boss = null;
     this.isBossFight = false;
+    
+    // Sistema de tutorial
+    this.tutorialStep = 0;
+    this.tutorialCompleted = this.loadTutorialState();
+    this.tutorialUI = null;
+    
+    // Sistema de combos
+    this.combo = 0;
+    this.maxCombo = 0;
+    this.comboTimer = null;
+    this.comboTimeout = 2000; // ms para perder el combo
+    this.comboMultiplier = 1;
+    
+    // Sistema de power-ups activos
+    this.activePowerUps = {
+      shield: { active: false, endTime: 0 },
+      speedBoost: { active: false, endTime: 0 },
+      damageBoost: { active: false, endTime: 0 }
+    };
+    
+    // Sistema de logros
+    this.achievements = this.loadAchievements();
+    this.achievementQueue = [];
+    
+    // Leaderboard local
+    this.leaderboard = this.loadLeaderboard();
+  }
+  
+  // ============================================
+  // LEADERBOARD LOCAL
+  // ============================================
+  
+  loadLeaderboard() {
+    try {
+      const saved = localStorage.getItem('portfolio_leaderboard');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.warn('Error cargando leaderboard');
+    }
+    return [];
+  }
+  
+  saveLeaderboard() {
+    try {
+      // Mantener solo top 10
+      this.leaderboard = this.leaderboard
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 10);
+      localStorage.setItem('portfolio_leaderboard', JSON.stringify(this.leaderboard));
+    } catch (e) {
+      console.warn('Error guardando leaderboard');
+    }
+  }
+  
+  addToLeaderboard() {
+    const entry = {
+      score: this.score,
+      crystals: this.crystals,
+      enemiesKilled: this.enemiesKilled,
+      maxCombo: this.maxCombo,
+      time: this.gameEndTime - this.gameStartTime,
+      date: new Date().toISOString(),
+      completed: this.gameState === GAME_CONFIG.STATES.GAME_OVER && 
+                 this.sectionsCompleted.length === this.sections.length - 1 // Excluyendo boss
+    };
+    
+    this.leaderboard.push(entry);
+    this.saveLeaderboard();
+    
+    // Verificar si es nuevo récord
+    const position = this.getLeaderboardPosition(this.score);
+    if (position === 1) {
+      this.showNewHighScoreEffect();
+    }
+    
+    return position;
+  }
+  
+  getLeaderboardPosition(score) {
+    const sortedScores = this.leaderboard
+      .map(e => e.score)
+      .sort((a, b) => b - a);
+    return sortedScores.indexOf(score) + 1;
+  }
+  
+  showNewHighScoreEffect() {
+    const highScoreText = this.add.text(
+      this.scale.width / 2,
+      this.scale.height / 2 - 100,
+      '🎉 ¡NUEVO RÉCORD! 🎉',
+      {
+        fontFamily: '"Orbitron", sans-serif',
+        fontSize: '36px',
+        color: '#ffd700',
+        stroke: '#333300',
+        strokeThickness: 4
+      }
+    );
+    highScoreText.setOrigin(0.5);
+    highScoreText.setDepth(300);
+    
+    // Animación
+    this.tweens.add({
+      targets: highScoreText,
+      scale: { from: 0.5, to: 1.2 },
+      duration: 500,
+      yoyo: true,
+      repeat: 2,
+      ease: 'Elastic.easeOut',
+      onComplete: () => {
+        this.tweens.add({
+          targets: highScoreText,
+          alpha: 0,
+          y: highScoreText.y - 50,
+          duration: 500,
+          onComplete: () => highScoreText.destroy()
+        });
+      }
+    });
+  }
+  
+  // ============================================
+  // PROGRESIÓN PERSISTENTE
+  // ============================================
+  
+  loadAchievements() {
+    try {
+      const saved = localStorage.getItem('portfolio_achievements');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.warn('Error cargando logros');
+    }
+    return {
+      firstBlood: false,      // Primera muerte de enemigo
+      combo5: false,          // Combo de 5
+      combo10: false,         // Combo de 10
+      combo20: false,         // Combo de 20
+      crystalCollector: false, // Recolectar 100 cristales
+      bossSlayer: false,      // Derrotar al jefe
+      perfectSection: false,  // Completar sección sin daño
+      speedRunner: false,     // Completar en menos de 5 minutos
+      upgradeMaster: false,   // Comprar todas las mejoras
+      survivor: false         // Sobrevivir con 1 HP
+    };
+  }
+  
+  saveAchievements() {
+    try {
+      localStorage.setItem('portfolio_achievements', JSON.stringify(this.achievements));
+    } catch (e) {
+      console.warn('Error guardando logros');
+    }
+  }
+  
+  unlockAchievement(id) {
+    if (this.achievements[id]) return; // Ya desbloqueado
+    
+    const achievementNames = {
+      firstBlood: '🔪 Primera Sangre',
+      combo5: '⚡ Combo x5',
+      combo10: '🔥 Combo x10',
+      combo20: '💥 Combo x20 - ¡IMPARABLE!',
+      crystalCollector: '💎 Coleccionista',
+      bossSlayer: '👑 Cazador de Jefes',
+      perfectSection: '🛡️ Perfecto',
+      speedRunner: '⏱️ Speed Runner',
+      upgradeMaster: '🔧 Maestro de Mejoras',
+      survivor: '❤️ Superviviente'
+    };
+    
+    this.achievements[id] = true;
+    this.saveAchievements();
+    
+    // Mostrar notificación
+    this.showAchievementNotification(achievementNames[id] || id);
+    
+    console.log(`🏆 Logro desbloqueado: ${id}`);
+  }
+  
+  showAchievementNotification(name) {
+    // Crear notificación visual del logro
+    const notification = this.add.container(this.scale.width / 2, 100);
+    notification.setDepth(300);
+    notification.alpha = 0;
+    
+    // Fondo
+    const bg = this.add.graphics();
+    bg.fillStyle(0x000000, 0.9);
+    bg.fillRoundedRect(-180, -30, 360, 60, 10);
+    bg.lineStyle(2, 0xffd700, 1);
+    bg.strokeRoundedRect(-180, -30, 360, 60, 10);
+    
+    // Icono
+    const icon = this.add.text(-150, 0, '🏆', { fontSize: '32px' });
+    icon.setOrigin(0.5);
+    
+    // Texto
+    const title = this.add.text(-100, -8, '¡LOGRO DESBLOQUEADO!', {
+      fontFamily: '"Orbitron", sans-serif',
+      fontSize: '12px',
+      color: '#ffd700'
+    });
+    
+    const nameText = this.add.text(-100, 8, name, {
+      fontFamily: '"JetBrains Mono", monospace',
+      fontSize: '14px',
+      color: '#ffffff'
+    });
+    
+    notification.add([bg, icon, title, nameText]);
+    
+    // Animación
+    this.tweens.add({
+      targets: notification,
+      alpha: 1,
+      y: 120,
+      duration: 400,
+      ease: 'Back.easeOut'
+    });
+    
+    this.time.delayedCall(3000, () => {
+      this.tweens.add({
+        targets: notification,
+        alpha: 0,
+        y: 80,
+        duration: 300,
+        onComplete: () => notification.destroy()
+      });
+    });
+  }
+  
+  // ============================================
+  // SISTEMA DE COMBOS
+  // ============================================
+  
+  incrementCombo() {
+    this.combo++;
+    
+    if (this.combo > this.maxCombo) {
+      this.maxCombo = this.combo;
+    }
+    
+    // Actualizar multiplicador
+    if (this.combo >= 20) {
+      this.comboMultiplier = 3;
+    } else if (this.combo >= 10) {
+      this.comboMultiplier = 2;
+    } else if (this.combo >= 5) {
+      this.comboMultiplier = 1.5;
+    } else {
+      this.comboMultiplier = 1;
+    }
+    
+    // Verificar logros de combo
+    if (this.combo === 5) this.unlockAchievement('combo5');
+    if (this.combo === 10) this.unlockAchievement('combo10');
+    if (this.combo === 20) this.unlockAchievement('combo20');
+    
+    // Reiniciar timer del combo
+    if (this.comboTimer) {
+      this.comboTimer.destroy();
+    }
+    
+    this.comboTimer = this.time.delayedCall(this.comboTimeout, () => {
+      this.resetCombo();
+    });
+    
+    // Mostrar UI del combo
+    this.showComboUI();
+  }
+  
+  resetCombo() {
+    this.combo = 0;
+    this.comboMultiplier = 1;
+    
+    if (this.comboUI) {
+      this.tweens.add({
+        targets: this.comboUI,
+        alpha: 0,
+        scale: 0.5,
+        duration: 200,
+        onComplete: () => {
+          if (this.comboUI) {
+            this.comboUI.destroy();
+            this.comboUI = null;
+          }
+        }
+      });
+    }
+  }
+  
+  showComboUI() {
+    if (!this.comboUI) {
+      this.comboUI = this.add.container(this.scale.width - 100, 150);
+      this.comboUI.setDepth(100);
+      
+      // Fondo
+      this.comboBg = this.add.graphics();
+      this.comboBg.fillStyle(0x000000, 0.7);
+      this.comboBg.fillRoundedRect(-60, -30, 120, 60, 8);
+      
+      // Texto del combo
+      this.comboText = this.add.text(0, -5, '', {
+        fontFamily: '"Orbitron", sans-serif',
+        fontSize: '28px',
+        color: '#ffff00',
+        stroke: '#333300',
+        strokeThickness: 2
+      });
+      this.comboText.setOrigin(0.5);
+      
+      // Multiplicador
+      this.comboMultiText = this.add.text(0, 20, '', {
+        fontFamily: '"JetBrains Mono", monospace',
+        fontSize: '12px',
+        color: '#ffffff'
+      });
+      this.comboMultiText.setOrigin(0.5);
+      
+      this.comboUI.add([this.comboBg, this.comboText, this.comboMultiText]);
+    }
+    
+    // Actualizar texto
+    this.comboText.setText(`x${this.combo}`);
+    this.comboMultiText.setText(`${this.comboMultiplier}x puntos`);
+    
+    // Color basado en combo
+    let color = '#ffff00'; // Amarillo por defecto
+    if (this.combo >= 20) {
+      color = '#ff0066';
+    } else if (this.combo >= 10) {
+      color = '#ff6600';
+    } else if (this.combo >= 5) {
+      color = '#00ff00';
+    }
+    this.comboText.setColor(color);
+    
+    // Animación de pulso
+    this.comboUI.alpha = 1;
+    this.comboUI.scale = 1;
+    
+    this.tweens.add({
+      targets: this.comboUI,
+      scale: 1.2,
+      duration: 100,
+      yoyo: true,
+      ease: 'Power2'
+    });
+  }
+  
+  // ============================================
+  // POWER-UPS
+  // ============================================
+  
+  spawnPowerUp(x, y) {
+    // 5% de probabilidad de spawn
+    if (Math.random() > 0.05) return;
+    
+    const powerUpTypes = ['shield', 'speedBoost', 'damageBoost'];
+    const type = powerUpTypes[Math.floor(Math.random() * powerUpTypes.length)];
+    
+    this.createPowerUp(x, y, type);
+  }
+  
+  createPowerUp(x, y, type) {
+    const powerUp = this.add.container(x, y);
+    powerUp.setDepth(25);
+    powerUp.powerUpType = type;
+    
+    const colors = {
+      shield: 0x00ffff,
+      speedBoost: 0x00ff00,
+      damageBoost: 0xff0000
+    };
+    
+    const icons = {
+      shield: '🛡️',
+      speedBoost: '⚡',
+      damageBoost: '💥'
+    };
+    
+    // Gráficos
+    const gfx = this.add.graphics();
+    gfx.fillStyle(colors[type], 0.8);
+    gfx.fillCircle(0, 0, 15);
+    gfx.lineStyle(2, colors[type], 1);
+    gfx.strokeCircle(0, 0, 18);
+    
+    const icon = this.add.text(0, 0, icons[type], { fontSize: '16px' });
+    icon.setOrigin(0.5);
+    
+    powerUp.add([gfx, icon]);
+    
+    // Física manual
+    powerUp.velocityY = 50;
+    
+    // Animación de flotación
+    this.tweens.add({
+      targets: powerUp,
+      y: y + 10,
+      duration: 500,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+    
+    // Auto-destruir después de 10 segundos
+    this.time.delayedCall(10000, () => {
+      if (powerUp.active) {
+        this.tweens.add({
+          targets: powerUp,
+          alpha: 0,
+          duration: 300,
+          onComplete: () => powerUp.destroy()
+        });
+      }
+    });
+    
+    // Agregar a un grupo para colisiones
+    if (!this.powerUps) {
+      this.powerUps = this.add.group();
+    }
+    this.powerUps.add(powerUp);
+  }
+  
+  collectPowerUp(powerUp) {
+    const type = powerUp.powerUpType;
+    const duration = 8000; // 8 segundos
+    
+    this.activePowerUps[type] = {
+      active: true,
+      endTime: this.time.now + duration
+    };
+    
+    // Aplicar efecto
+    switch (type) {
+      case 'shield':
+        this.player.isInvulnerable = true;
+        this.showPowerUpEffect('🛡️ ¡ESCUDO ACTIVADO!', 0x00ffff);
+        break;
+      case 'speedBoost':
+        this.player.lerpFactor = 0.16; // Doble de velocidad
+        this.showPowerUpEffect('⚡ ¡VELOCIDAD BOOST!', 0x00ff00);
+        break;
+      case 'damageBoost':
+        this.player.bulletDamage *= 2;
+        this.showPowerUpEffect('💥 ¡DAÑO x2!', 0xff0000);
+        break;
+    }
+    
+    // Efecto visual de recogida
+    this.createExplosion(powerUp.x, powerUp.y, 30, 0xffffff);
+    
+    // Desactivar después de la duración
+    this.time.delayedCall(duration, () => {
+      this.deactivatePowerUp(type);
+    });
+    
+    powerUp.destroy();
+  }
+  
+  deactivatePowerUp(type) {
+    this.activePowerUps[type].active = false;
+    
+    switch (type) {
+      case 'shield':
+        this.player.isInvulnerable = false;
+        break;
+      case 'speedBoost':
+        this.player.lerpFactor = GAME_CONFIG.PLAYER.LERP_FACTOR;
+        break;
+      case 'damageBoost':
+        // Recalcular daño basado en mejoras
+        const damageLevel = this.upgradeLevels.BULLET_DAMAGE || 0;
+        const baseValue = getUpgradeValue('BULLET_DAMAGE', damageLevel);
+        this.player.bulletDamage = baseValue;
+        break;
+    }
+  }
+  
+  showPowerUpEffect(text, color) {
+    const effect = this.add.text(this.scale.width / 2, this.scale.height / 2 - 50, text, {
+      fontFamily: '"Orbitron", sans-serif',
+      fontSize: '24px',
+      color: '#ffffff',
+      stroke: '#000000',
+      strokeThickness: 4
+    });
+    effect.setOrigin(0.5);
+    effect.setDepth(150);
+    
+    this.tweens.add({
+      targets: effect,
+      y: effect.y - 50,
+      alpha: 0,
+      scale: 1.5,
+      duration: 1000,
+      ease: 'Power2',
+      onComplete: () => effect.destroy()
+    });
+  }
+  
+  loadTutorialState() {
+    try {
+      return localStorage.getItem('portfolio_tutorial_completed') === 'true';
+    } catch (e) {
+      return false;
+    }
+  }
+  
+  saveTutorialState() {
+    try {
+      localStorage.setItem('portfolio_tutorial_completed', 'true');
+    } catch (e) {
+      console.warn('Error guardando estado de tutorial');
+    }
   }
   
   create() {
@@ -187,9 +707,22 @@ export class MainScene extends Phaser.Scene {
   setupInput() {
     console.log('🎮 Configurando input...');
     
+    // Detectar si es dispositivo táctil
+    this.isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    
+    // Si es táctil, crear controles virtuales
+    if (this.isTouchDevice) {
+      this.createTouchControls();
+    }
+    
     // Mouse move - usar coordenadas globales para evitar desfase con scroll
     this.input.on('pointermove', (pointer) => {
       if (this.gameState === GAME_CONFIG.STATES.PLAYING) {
+        // Si es táctil, usar el joystick en su lugar
+        if (this.isTouchDevice && this.virtualJoystick) {
+          return;
+        }
+        
         // Obtener coordenadas del canvas desde el evento global
         const canvas = this.game.canvas;
         const rect = canvas.getBoundingClientRect();
@@ -259,6 +792,145 @@ export class MainScene extends Phaser.Scene {
     });
   }
   
+  // ============================================
+  // CONTROLES TÁCTILES
+  // ============================================
+  
+  createTouchControls() {
+    // Joystick virtual (lado izquierdo)
+    this.joystickBase = this.add.graphics();
+    this.joystickBase.setDepth(500);
+    this.joystickBase.setScrollFactor(0);
+    this.joystickBase.setVisible(false);
+    
+    this.joystickThumb = this.add.graphics();
+    this.joystickThumb.setDepth(501);
+    this.joystickThumb.setScrollFactor(0);
+    this.joystickThumb.setVisible(false);
+    
+    this.joystickActive = false;
+    this.joystickBaseX = 0;
+    this.joystickBaseY = 0;
+    this.joystickRadius = 60;
+    this.joystickThumbRadius = 30;
+    
+    // Botón de misil (lado derecho)
+    this.missileButton = this.add.graphics();
+    this.missileButton.setDepth(500);
+    this.missileButton.setScrollFactor(0);
+    this.missileButton.setVisible(false);
+    
+    const missileButtonX = this.scale.width - 80;
+    const missileButtonY = this.scale.height - 120;
+    
+    this.missileButton.fillStyle(0xff00ff, 0.3);
+    this.missileButton.fillCircle(missileButtonX, missileButtonY, 45);
+    this.missileButton.lineStyle(3, 0xff00ff, 0.8);
+    this.missileButton.strokeCircle(missileButtonX, missileButtonY, 45);
+    
+    // Icono del misil
+    this.missileButtonIcon = this.add.text(missileButtonX, missileButtonY, '🚀', {
+      fontSize: '28px'
+    });
+    this.missileButtonIcon.setOrigin(0.5);
+    this.missileButtonIcon.setDepth(502);
+    this.missileButtonIcon.setScrollFactor(0);
+    this.missileButtonIcon.setVisible(false);
+    
+    // Eventos táctiles
+    this.input.on('pointerdown', (pointer) => {
+      if (this.gameState !== GAME_CONFIG.STATES.PLAYING) return;
+      
+      // Verificar si tocó el botón de misil
+      const distToMissile = Phaser.Math.Distance.Between(
+        pointer.x, pointer.y, missileButtonX, missileButtonY
+      );
+      
+      if (distToMissile < 50) {
+        this.fireMissile();
+        return;
+      }
+      
+      // Si tocó el lado izquierdo, activar joystick
+      if (pointer.x < this.scale.width / 2) {
+        this.joystickActive = true;
+        this.joystickBaseX = pointer.x;
+        this.joystickBaseY = pointer.y;
+        this.updateJoystickGraphics(pointer.x, pointer.y);
+        this.showTouchControls();
+      }
+    });
+    
+    this.input.on('pointermove', (pointer) => {
+      if (this.gameState !== GAME_CONFIG.STATES.PLAYING) return;
+      if (!this.joystickActive) return;
+      
+      // Calcular dirección del joystick
+      const dx = pointer.x - this.joystickBaseX;
+      const dy = pointer.y - this.joystickBaseY;
+      const distance = Math.min(Math.sqrt(dx * dx + dy * dy), this.joystickRadius);
+      const angle = Math.atan2(dy, dx);
+      
+      // Mover el thumb del joystick
+      const thumbX = this.joystickBaseX + Math.cos(angle) * distance;
+      const thumbY = this.joystickBaseY + Math.sin(angle) * distance;
+      this.updateJoystickGraphics(thumbX, thumbY);
+      
+      // Mover al jugador basado en la dirección del joystick
+      const speed = distance / this.joystickRadius * 400;
+      const targetX = this.player.x + Math.cos(angle) * speed * 0.016;
+      const targetY = this.player.y + Math.sin(angle) * speed * 0.016;
+      
+      // Limitar a los bordes de la pantalla
+      const clampedX = Phaser.Math.Clamp(targetX, 30, this.scale.width - 30);
+      const clampedY = Phaser.Math.Clamp(targetY, 30, this.scale.height - 30);
+      
+      this.player.setTarget(clampedX, clampedY);
+    });
+    
+    this.input.on('pointerup', (pointer) => {
+      if (this.joystickActive && pointer.x < this.scale.width / 2) {
+        this.joystickActive = false;
+        this.hideTouchControls();
+      }
+    });
+  }
+  
+  updateJoystickGraphics(thumbX, thumbY) {
+    // Dibujar base del joystick
+    this.joystickBase.clear();
+    this.joystickBase.fillStyle(0x00ffff, 0.2);
+    this.joystickBase.fillCircle(this.joystickBaseX, this.joystickBaseY, this.joystickRadius);
+    this.joystickBase.lineStyle(2, 0x00ffff, 0.5);
+    this.joystickBase.strokeCircle(this.joystickBaseX, this.joystickBaseY, this.joystickRadius);
+    
+    // Dibujar thumb del joystick
+    this.joystickThumb.clear();
+    this.joystickThumb.fillStyle(0x00ffff, 0.6);
+    this.joystickThumb.fillCircle(thumbX, thumbY, this.joystickThumbRadius);
+    this.joystickThumb.lineStyle(2, 0x00ffff, 1);
+    this.joystickThumb.strokeCircle(thumbX, thumbY, this.joystickThumbRadius);
+  }
+  
+  showTouchControls() {
+    if (!this.isTouchDevice) return;
+    
+    this.joystickBase.setVisible(true);
+    this.joystickThumb.setVisible(true);
+    this.missileButton.setVisible(true);
+    this.missileButtonIcon.setVisible(true);
+  }
+  
+  hideTouchControls() {
+    this.joystickBase.setVisible(false);
+    this.joystickThumb.setVisible(false);
+    // Mantener botón de misil visible si está jugando
+    if (this.gameState !== GAME_CONFIG.STATES.PLAYING) {
+      this.missileButton.setVisible(false);
+      this.missileButtonIcon.setVisible(false);
+    }
+  }
+  
   setupGameEvents() {
     // Spawn de enemigos desde spawners
     this.events.on('spawnEnemy', (x, y, type) => {
@@ -276,8 +948,18 @@ export class MainScene extends Phaser.Scene {
     
     // Muerte de enemigos
     this.events.on('enemyDeath', (x, y, points, crystalDrop, type) => {
-      this.score += points;
+      // Sistema de combos
+      this.incrementCombo();
+      
+      // Puntos con multiplicador de combo
+      const comboBonus = Math.floor(points * (this.comboMultiplier - 1));
+      this.score += points + comboBonus;
       this.enemiesKilled++;
+      
+      // Logro de primera muerte
+      if (this.enemiesKilled === 1) {
+        this.unlockAchievement('firstBlood');
+      }
       
       // Rastrear por tipo
       if (this.enemiesKilledByType[type] !== undefined) {
@@ -311,6 +993,9 @@ export class MainScene extends Phaser.Scene {
           health.magnetize();
         }
       }
+      
+      // Chance de spawn de power-up
+      this.spawnPowerUp(x, y);
     });
     
     // Spawner destruido
@@ -386,6 +1071,13 @@ export class MainScene extends Phaser.Scene {
   
   bulletHitEnemy(bullet, enemy) {
     const damage = bullet.damage;
+    
+    // Mostrar número de daño flotante
+    this.showDamageNumber(enemy.x, enemy.y, damage, false);
+    
+    // Efecto de impacto
+    this.createImpactEffect(bullet.x, bullet.y, 0x00ffff);
+    
     bullet.destroy();
     enemy.takeDamage(damage);
     this.bulletsHit++;
@@ -393,9 +1085,170 @@ export class MainScene extends Phaser.Scene {
   
   bulletHitSpawner(bullet, spawner) {
     const damage = bullet.damage;
+    
+    // Mostrar número de daño flotante
+    this.showDamageNumber(spawner.x, spawner.y, damage, false);
+    
+    // Efecto de impacto más grande para spawners
+    this.createImpactEffect(bullet.x, bullet.y, 0xff00ff, 1.5);
+    
     bullet.destroy();
     spawner.takeDamage(damage);
     this.bulletsHit++;
+  }
+  
+  // Sistema de números de daño flotantes
+  showDamageNumber(x, y, damage, isCritical = false) {
+    const offsetX = (Math.random() - 0.5) * 20;
+    const offsetY = -20 + (Math.random() - 0.5) * 10;
+    
+    const fontSize = isCritical ? '24px' : '16px';
+    const color = isCritical ? '#ff0000' : '#ffffff';
+    const stroke = isCritical ? '#660000' : '#000000';
+    
+    const damageText = this.add.text(x + offsetX, y + offsetY, damage.toString(), {
+      fontFamily: '"Orbitron", sans-serif',
+      fontSize: fontSize,
+      color: color,
+      stroke: stroke,
+      strokeThickness: 3,
+      fontStyle: isCritical ? 'bold' : 'normal'
+    });
+    damageText.setOrigin(0.5);
+    damageText.setDepth(150);
+    
+    // Animación de subida y desvanecimiento
+    this.tweens.add({
+      targets: damageText,
+      y: damageText.y - 40,
+      alpha: 0,
+      scale: isCritical ? 1.5 : 1.2,
+      duration: 800,
+      ease: 'Power2',
+      onComplete: () => {
+        damageText.destroy();
+      }
+    });
+  }
+  
+  // Efecto de impacto de bala
+  createImpactEffect(x, y, color = 0x00ffff, scale = 1) {
+    const impact = this.add.graphics();
+    impact.setPosition(x, y);
+    impact.setDepth(50);
+    
+    // Círculo de impacto
+    impact.fillStyle(color, 0.8);
+    impact.fillCircle(0, 0, 5 * scale);
+    
+    // Anillo exterior
+    impact.lineStyle(2, color, 0.6);
+    impact.strokeCircle(0, 0, 8 * scale);
+    
+    // Animación de expansión y desvanecimiento
+    this.tweens.add({
+      targets: impact,
+      alpha: 0,
+      scale: 2,
+      duration: 200,
+      onComplete: () => {
+        impact.destroy();
+      }
+    });
+    
+    // Partículas de chispas
+    for (let i = 0; i < 4; i++) {
+      const spark = this.add.graphics();
+      spark.setPosition(x, y);
+      spark.setDepth(50);
+      spark.fillStyle(color, 1);
+      spark.fillCircle(0, 0, 2);
+      
+      const angle = (Math.PI * 2 / 4) * i + Math.random() * 0.5;
+      const distance = 15 + Math.random() * 10;
+      
+      this.tweens.add({
+        targets: spark,
+        x: x + Math.cos(angle) * distance,
+        y: y + Math.sin(angle) * distance,
+        alpha: 0,
+        duration: 200,
+        onComplete: () => {
+          spark.destroy();
+        }
+      });
+    }
+  }
+  
+  // Explosión mejorada para misiles y muertes
+  createExplosion(x, y, radius = 50, color = 0xff6600) {
+    // Flash principal
+    const flash = this.add.graphics();
+    flash.setPosition(x, y);
+    flash.setDepth(60);
+    flash.fillStyle(0xffffff, 1);
+    flash.fillCircle(0, 0, radius * 0.3);
+    
+    this.tweens.add({
+      targets: flash,
+      alpha: 0,
+      scale: 3,
+      duration: 100,
+      onComplete: () => flash.destroy()
+    });
+    
+    // Círculos de onda expansiva
+    for (let i = 0; i < 3; i++) {
+      const ring = this.add.graphics();
+      ring.setPosition(x, y);
+      ring.setDepth(55);
+      ring.lineStyle(4 - i, color, 0.8 - i * 0.2);
+      ring.strokeCircle(0, 0, radius * 0.2);
+      
+      this.tweens.add({
+        targets: ring,
+        scale: (i + 1) * 1.5,
+        alpha: 0,
+        duration: 400 + i * 100,
+        delay: i * 50,
+        onComplete: () => ring.destroy()
+      });
+    }
+    
+    // Partículas de fuego/escombros
+    const particleCount = 12;
+    for (let i = 0; i < particleCount; i++) {
+      const particle = this.add.graphics();
+      particle.setPosition(x, y);
+      particle.setDepth(58);
+      
+      // Colores: naranja, rojo, amarillo
+      const colors = [0xff6600, 0xff0000, 0xffff00, color];
+      const pColor = colors[Math.floor(Math.random() * colors.length)];
+      
+      const size = 3 + Math.random() * 5;
+      particle.fillStyle(pColor, 1);
+      particle.fillCircle(0, 0, size);
+      
+      const angle = (Math.PI * 2 / particleCount) * i + Math.random() * 0.3;
+      const distance = radius * 0.5 + Math.random() * radius * 0.8;
+      const duration = 300 + Math.random() * 300;
+      
+      this.tweens.add({
+        targets: particle,
+        x: x + Math.cos(angle) * distance,
+        y: y + Math.sin(angle) * distance,
+        alpha: 0,
+        scale: 0.2,
+        duration: duration,
+        ease: 'Power2',
+        onComplete: () => particle.destroy()
+      });
+    }
+    
+    // Screen shake proporcional al tamaño
+    const shakeIntensity = Math.min(radius / 200, 0.02);
+    this.cameras.main.shake(150, shakeIntensity);
   }
   
   checkAllCollisions() {
@@ -493,6 +1346,18 @@ export class MainScene extends Phaser.Scene {
         this.collectHealth(this.player, health);
       }
     });
+    
+    // Power-ups vs jugador
+    if (this.powerUps) {
+      this.powerUps.getChildren().forEach(powerUp => {
+        if (!powerUp || !powerUp.active) return;
+        
+        const dist = Phaser.Math.Distance.Between(powerUp.x, powerUp.y, playerX, playerY);
+        if (dist < playerRadius + 20) {
+          this.collectPowerUp(powerUp);
+        }
+      });
+    }
     
     // Colisiones con el jefe (si está activo)
     if (this.boss && !this.boss.isDestroyed) {
@@ -847,6 +1712,248 @@ export class MainScene extends Phaser.Scene {
     this.idleContainer.add([title, instructions]);
   }
   
+  // ============================================
+  // SISTEMA DE TUTORIAL
+  // ============================================
+  
+  createTutorial() {
+    if (this.tutorialCompleted) return;
+    
+    this.tutorialStep = 0;
+    this.tutorialUI = this.add.container(0, 0);
+    this.tutorialUI.setDepth(200);
+    
+    this.showTutorialStep();
+  }
+  
+  getTutorialSteps() {
+    return [
+      {
+        title: '🎮 ¡Bienvenido, Piloto!',
+        message: 'Tu nave seguirá el cursor del mouse.\n¡Muévete para esquivar enemigos!',
+        highlight: 'player',
+        duration: 4000
+      },
+      {
+        title: '🔫 Disparo Automático',
+        message: 'Tu nave dispara automáticamente.\nApunta con el cursor hacia los enemigos.',
+        highlight: 'bullets',
+        duration: 3500
+      },
+      {
+        title: '🚀 Misil Especial',
+        message: 'Haz CLICK para lanzar un misil poderoso.\n¡Causa daño en área!',
+        highlight: 'missile',
+        duration: 3500
+      },
+      {
+        title: '💎 Cristales',
+        message: 'Recoge cristales de enemigos derrotados.\n¡Úsalos para comprar mejoras!',
+        highlight: 'crystals',
+        duration: 3500
+      },
+      {
+        title: '🎯 Objetivo',
+        message: 'Destruye los generadores (hexágonos)\npara completar cada oleada.',
+        highlight: 'spawner',
+        duration: 3500
+      },
+      {
+        title: '✨ ¡Buena Suerte!',
+        message: 'Conquista cada sección del portfolio.\n¡Derrota al jefe final para ganar!',
+        highlight: null,
+        duration: 3000
+      }
+    ];
+  }
+  
+  showTutorialStep() {
+    if (!this.tutorialUI) return;
+    
+    const steps = this.getTutorialSteps();
+    if (this.tutorialStep >= steps.length) {
+      this.completeTutorial();
+      return;
+    }
+    
+    const step = steps[this.tutorialStep];
+    
+    // Limpiar UI anterior
+    this.tutorialUI.removeAll(true);
+    
+    // Fondo semi-transparente
+    const bg = this.add.graphics();
+    bg.fillStyle(0x000000, 0.6);
+    bg.fillRect(0, 0, this.scale.width, this.scale.height);
+    
+    // Panel del tutorial
+    const panelWidth = 400;
+    const panelHeight = 180;
+    const panelX = this.scale.width / 2 - panelWidth / 2;
+    const panelY = this.scale.height - panelHeight - 120;
+    
+    const panel = this.add.graphics();
+    panel.fillStyle(0x0c0c14, 0.95);
+    panel.fillRoundedRect(panelX, panelY, panelWidth, panelHeight, 15);
+    panel.lineStyle(2, 0x00ffff, 0.8);
+    panel.strokeRoundedRect(panelX, panelY, panelWidth, panelHeight, 15);
+    
+    // Indicador de progreso
+    const progressBg = this.add.graphics();
+    progressBg.fillStyle(0x333333, 0.5);
+    progressBg.fillRect(panelX + 20, panelY + panelHeight - 30, panelWidth - 40, 6);
+    
+    const progressBar = this.add.graphics();
+    const progress = (this.tutorialStep + 1) / steps.length;
+    progressBar.fillStyle(0x00ffff, 1);
+    progressBar.fillRect(panelX + 20, panelY + panelHeight - 30, (panelWidth - 40) * progress, 6);
+    
+    // Título
+    const title = this.add.text(this.scale.width / 2, panelY + 30, step.title, {
+      fontFamily: '"Orbitron", sans-serif',
+      fontSize: '22px',
+      color: '#00ffff',
+      stroke: '#003333',
+      strokeThickness: 2
+    });
+    title.setOrigin(0.5);
+    
+    // Mensaje
+    const message = this.add.text(this.scale.width / 2, panelY + 80, step.message, {
+      fontFamily: '"JetBrains Mono", monospace',
+      fontSize: '14px',
+      color: '#ffffff',
+      align: 'center',
+      lineSpacing: 6
+    });
+    message.setOrigin(0.5);
+    
+    // Indicador de paso
+    const stepIndicator = this.add.text(this.scale.width / 2, panelY + panelHeight - 50, 
+      `${this.tutorialStep + 1}/${steps.length}`, {
+      fontFamily: '"JetBrains Mono", monospace',
+      fontSize: '12px',
+      color: '#666666'
+    });
+    stepIndicator.setOrigin(0.5);
+    
+    // Botón de saltar
+    const skipText = this.add.text(panelX + panelWidth - 20, panelY + 15, 'Saltar ⏭️', {
+      fontFamily: '"JetBrains Mono", monospace',
+      fontSize: '12px',
+      color: '#666666'
+    });
+    skipText.setOrigin(1, 0);
+    skipText.setInteractive({ useHandCursor: true });
+    skipText.on('pointerover', () => skipText.setColor('#ffffff'));
+    skipText.on('pointerout', () => skipText.setColor('#666666'));
+    skipText.on('pointerdown', () => this.completeTutorial());
+    
+    // Añadir highlight visual si corresponde
+    if (step.highlight) {
+      this.createTutorialHighlight(step.highlight);
+    }
+    
+    this.tutorialUI.add([bg, panel, progressBg, progressBar, title, message, stepIndicator, skipText]);
+    
+    // Animación de entrada
+    this.tutorialUI.alpha = 0;
+    this.tweens.add({
+      targets: this.tutorialUI,
+      alpha: 1,
+      duration: 300
+    });
+    
+    // Avanzar al siguiente paso
+    this.time.delayedCall(step.duration, () => {
+      this.tutorialStep++;
+      this.showTutorialStep();
+    });
+  }
+  
+  createTutorialHighlight(type) {
+    const highlight = this.add.graphics();
+    highlight.setDepth(199);
+    
+    let x, y, radius;
+    
+    switch (type) {
+      case 'player':
+        x = this.player.x;
+        y = this.player.y;
+        radius = 50;
+        break;
+      case 'bullets':
+        x = this.player.x;
+        y = this.player.y - 100;
+        radius = 40;
+        break;
+      case 'missile':
+        x = this.player.x;
+        y = this.player.y;
+        radius = 60;
+        break;
+      case 'crystals':
+        x = this.scale.width / 2;
+        y = this.scale.height / 2 - 50;
+        radius = 50;
+        break;
+      case 'spawner':
+        x = this.scale.width / 2;
+        y = 150;
+        radius = 80;
+        break;
+      default:
+        return;
+    }
+    
+    // Círculo de highlight pulsante
+    highlight.lineStyle(3, 0x00ffff, 0.8);
+    highlight.strokeCircle(x, y, radius);
+    
+    this.tutorialUI.add(highlight);
+    
+    // Animación de pulso
+    this.tweens.add({
+      targets: { scale: 1 },
+      scale: 1.2,
+      duration: 600,
+      yoyo: true,
+      repeat: -1,
+      onUpdate: (tween) => {
+        const scale = tween.getValue();
+        highlight.clear();
+        highlight.lineStyle(3, 0x00ffff, 0.8 / scale);
+        highlight.strokeCircle(x, y, radius * scale);
+      }
+    });
+  }
+  
+  completeTutorial() {
+    this.tutorialCompleted = true;
+    this.saveTutorialState();
+    
+    if (this.tutorialUI) {
+      this.tweens.add({
+        targets: this.tutorialUI,
+        alpha: 0,
+        duration: 300,
+        onComplete: () => {
+          if (this.tutorialUI) {
+            this.tutorialUI.destroy();
+            this.tutorialUI = null;
+          }
+        }
+      });
+    }
+    
+    console.log('📖 Tutorial completado');
+  }
+  
+  skipTutorial() {
+    this.completeTutorial();
+  }
+  
   createSpawnersForScreen() {
     const section = this.sections[this.currentSection];
     if (!section) return;
@@ -1137,19 +2244,45 @@ export class MainScene extends Phaser.Scene {
       aboutPage.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
     
-    // Crear spawners para la primera pantalla
-    this.createSpawnersForScreen();
-    
-    // Iniciar spawners después de un pequeño delay
-    this.time.delayedCall(500, () => {
-      this.spawners.getChildren().forEach(spawner => {
-        spawner.spawnInitialEnemies();
+    // Mostrar tutorial si es la primera vez
+    if (!this.tutorialCompleted) {
+      this.createTutorial();
+      
+      // Esperar a que termine el tutorial antes de crear spawners
+      const tutorialDuration = this.getTutorialSteps().reduce((total, step) => total + step.duration, 0);
+      
+      this.time.delayedCall(tutorialDuration + 500, () => {
+        // Crear spawners para la primera pantalla
+        this.createSpawnersForScreen();
+        
+        // Iniciar spawners después de un pequeño delay
+        this.time.delayedCall(500, () => {
+          this.spawners.getChildren().forEach(spawner => {
+            spawner.spawnInitialEnemies();
+          });
+        });
       });
-    });
+    } else {
+      // Crear spawners para la primera pantalla
+      this.createSpawnersForScreen();
+      
+      // Iniciar spawners después de un pequeño delay
+      this.time.delayedCall(500, () => {
+        this.spawners.getChildren().forEach(spawner => {
+          spawner.spawnInitialEnemies();
+        });
+      });
+    }
     
     // Posicionar jugador en el cursor actual
     const pointer = this.input.activePointer;
     this.player.setTarget(pointer.x, pointer.y);
+    
+    // Mostrar controles táctiles si es necesario
+    if (this.isTouchDevice) {
+      this.missileButton.setVisible(true);
+      this.missileButtonIcon.setVisible(true);
+    }
   }
   
   pauseGame() {
@@ -1725,6 +2858,9 @@ export class MainScene extends Phaser.Scene {
     // Rastrear tiempo de partida
     this.gameEndTime = this.time.now;
     
+    // Agregar al leaderboard
+    this.addToLeaderboard();
+    
     // Marcar todas las secciones como completadas si no están ya
     this.sections.forEach((section, index) => {
       const alreadyCompleted = this.sectionsCompleted.find(s => s.sectionId === section.id);
@@ -2097,6 +3233,9 @@ export class MainScene extends Phaser.Scene {
     
     // Rastrear tiempo de partida y lugar de muerte
     this.gameEndTime = this.time.now;
+    
+    // Agregar al leaderboard
+    this.addToLeaderboard();
     const currentSection = this.sections[this.currentSection];
     if (currentSection) {
       this.deathSection = {

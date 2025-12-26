@@ -1,0 +1,13 @@
+# Portfolio - Robots.txt
+# https://tu-dominio.com
+
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://tu-dominio.com/sitemap.xml
+
+# Bloquear recursos innecesarios para crawlers
+Disallow: /node_modules/
+Disallow: /.git/
+

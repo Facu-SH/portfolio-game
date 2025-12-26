@@ -2,10 +2,62 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Portfolio | Dev Back-end & Videojuegos</title>
-  <meta name="description" content="Portfolio interactivo de desarrollador back-end y videojuegos con minijuego espacial integrado">
+    
+    <!-- SEO Básico -->
+    <title>Portfolio | Desarrollador Back-end & Videojuegos</title>
+    <meta name="description" content="Portfolio interactivo de desarrollador back-end y videojuegos. Especializado en Node.js, Python, Unity y Godot. Explora mis proyectos con un minijuego espacial integrado.">
+    <meta name="keywords" content="desarrollador, backend, videojuegos, portfolio, Node.js, Python, Unity, Godot, gamedev, programador">
+    <meta name="author" content="Tu Nombre">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://tu-dominio.com/">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://tu-dominio.com/">
+    <meta property="og:title" content="Portfolio | Desarrollador Back-end & Videojuegos">
+    <meta property="og:description" content="Portfolio interactivo con minijuego espacial integrado. Desarrollador especializado en sistemas escalables y videojuegos indie.">
+    <meta property="og:image" content="https://tu-dominio.com/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:locale" content="es_ES">
+    <meta property="og:site_name" content="Portfolio Dev">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://tu-dominio.com/">
+    <meta name="twitter:title" content="Portfolio | Desarrollador Back-end & Videojuegos">
+    <meta name="twitter:description" content="Portfolio interactivo con minijuego espacial integrado. Desarrollador especializado en sistemas escalables y videojuegos indie.">
+    <meta name="twitter:image" content="https://tu-dominio.com/og-image.png">
+    <meta name="twitter:creator" content="@tu_usuario">
+    
+    <!-- Favicon y App Icons -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0c0c14">
+    <meta name="msapplication-TileColor" content="#0c0c14">
+    
+    <!-- Schema.org JSON-LD -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Person",
+      "name": "Tu Nombre",
+      "url": "https://tu-dominio.com",
+      "image": "https://tu-dominio.com/tu-foto.jpg",
+      "jobTitle": "Desarrollador Back-end & Videojuegos",
+      "description": "Desarrollador especializado en sistemas escalables y videojuegos indie",
+      "sameAs": [
+        "https://github.com/tu-usuario",
+        "https://linkedin.com/in/tu-usuario",
+        "https://itch.io/profile/tu-usuario"
+      ],
+      "knowsAbout": ["Node.js", "Python", "Unity", "Godot", "Backend Development", "Game Development"]
+    }
+    </script>
   
   <!-- Estilos críticos para pantalla de carga (inline para evitar FOUC) -->
   <style>
@@ -76,6 +128,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   </head>
   <body>
+  <!-- Skip link para accesibilidad -->
+  <a href="#app" class="skip-link">Saltar al contenido principal</a>
+  
   <!-- Pantalla de carga -->
   <div id="loading-screen" class="loading-screen">
     <div class="loading-content">
@@ -110,6 +165,7 @@
       <li><a href="#" class="nav-link active" data-page="about">Sobre Mí<span class="conquest-badge">⭐</span></a></li>
       <li><a href="#" class="nav-link" data-page="experience">Experiencia<span class="conquest-badge">⭐</span></a></li>
       <li><a href="#" class="nav-link" data-page="portfolio">Portfolio<span class="conquest-badge">🏆</span></a></li>
+      <li><a href="#" class="nav-link" data-page="contact">Contacto</a></li>
     </ul>
   </nav>
 
@@ -589,6 +645,111 @@
             </div>
           </article>
 
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== PÁGINA: CONTACTO ==================== -->
+    <section id="page-contact" class="page">
+      <div class="page-content">
+        <header class="page-header">
+          <h1 class="page-title">Contacto</h1>
+          <p class="page-subtitle">¿Tienes un proyecto en mente? ¡Hablemos!</p>
+        </header>
+
+        <div class="contact-container">
+          <!-- Información de contacto -->
+          <div class="contact-info">
+            <div class="contact-card">
+              <div class="contact-icon">📧</div>
+              <h3>Email</h3>
+              <a href="mailto:tu@email.com">tu@email.com</a>
+            </div>
+            
+            <div class="contact-card">
+              <div class="contact-icon">📍</div>
+              <h3>Ubicación</h3>
+              <p>Ciudad, País</p>
+            </div>
+            
+            <div class="contact-card">
+              <div class="contact-icon">💼</div>
+              <h3>Disponibilidad</h3>
+              <p class="availability available">Disponible para proyectos</p>
+            </div>
+            
+            <div class="contact-card">
+              <div class="contact-icon">🔗</div>
+              <h3>Redes</h3>
+              <div class="contact-social">
+                <a href="https://github.com" target="_blank" rel="noopener noreferrer" aria-label="GitHub">GitHub</a>
+                <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">LinkedIn</a>
+                <a href="https://itch.io" target="_blank" rel="noopener noreferrer" aria-label="itch.io">itch.io</a>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Formulario de contacto -->
+          <div class="contact-form-container">
+            <form id="contact-form" class="contact-form" action="https://formspree.io/f/YOUR_FORM_ID" method="POST">
+              <!-- Honeypot para anti-spam -->
+              <input type="text" name="_gotcha" style="display:none" tabindex="-1" autocomplete="off">
+              
+              <div class="form-group">
+                <label for="contact-name">Nombre *</label>
+                <input 
+                  type="text" 
+                  id="contact-name" 
+                  name="name" 
+                  required 
+                  placeholder="Tu nombre"
+                  autocomplete="name"
+                >
+              </div>
+              
+              <div class="form-group">
+                <label for="contact-email">Email *</label>
+                <input 
+                  type="email" 
+                  id="contact-email" 
+                  name="email" 
+                  required 
+                  placeholder="tu@email.com"
+                  autocomplete="email"
+                >
+              </div>
+              
+              <div class="form-group">
+                <label for="contact-subject">Asunto *</label>
+                <select id="contact-subject" name="subject" required>
+                  <option value="">Selecciona un asunto</option>
+                  <option value="proyecto">Propuesta de proyecto</option>
+                  <option value="trabajo">Oportunidad laboral</option>
+                  <option value="colaboracion">Colaboración</option>
+                  <option value="otro">Otro</option>
+                </select>
+              </div>
+              
+              <div class="form-group">
+                <label for="contact-message">Mensaje *</label>
+                <textarea 
+                  id="contact-message" 
+                  name="message" 
+                  required 
+                  placeholder="Cuéntame sobre tu proyecto..."
+                  rows="5"
+                ></textarea>
+              </div>
+              
+              <button type="submit" class="btn btn-primary submit-btn">
+                <span class="btn-text">Enviar Mensaje</span>
+                <span class="btn-loading" style="display: none;">Enviando...</span>
+              </button>
+              
+              <!-- Mensajes de estado -->
+              <div id="form-status" class="form-status" aria-live="polite"></div>
+            </form>
+          </div>
         </div>
       </div>
     </section>

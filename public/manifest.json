@@ -1,0 +1,28 @@
+{
+  "name": "Portfolio - Desarrollador Back-end & Videojuegos",
+  "short_name": "Portfolio Dev",
+  "description": "Portfolio interactivo con minijuego espacial integrado",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0c0c14",
+  "theme_color": "#6366f1",
+  "orientation": "any",
+  "scope": "/",
+  "lang": "es",
+  "categories": ["portfolio", "games", "development"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
+

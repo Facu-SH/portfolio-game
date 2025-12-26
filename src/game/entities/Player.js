@@ -156,8 +156,77 @@ export class Player extends Phaser.GameObjects.Container {
   }
   
   createTrail() {
-    // Trail simple con partículas
+    // Sistema de partículas de trail mejorado
     this.trailParticles = [];
+    this.maxTrailParticles = 20;
+    this.trailEmitTimer = 0;
+    this.trailEmitRate = 30; // ms entre emisiones
+  }
+  
+  emitTrailParticle() {
+    // Crear partícula de trail
+    const particle = this.scene.add.graphics();
+    const angle = this.rotation - Math.PI / 2 + Math.PI; // Dirección opuesta al movimiento
+    const offsetX = (Math.random() - 0.5) * 8;
+    const startX = this.x + Math.cos(angle) * 15 + offsetX;
+    const startY = this.y + Math.sin(angle) * 15;
+    
+    particle.setPosition(startX, startY);
+    particle.setDepth(5);
+    
+    // Color aleatorio entre cyan y magenta
+    const colorMix = Math.random();
+    const color = colorMix > 0.5 ? GAME_CONFIG.COLORS.CYAN_NEON : GAME_CONFIG.COLORS.MAGENTA;
+    
+    particle.fillStyle(color, 0.8);
+    particle.fillCircle(0, 0, 2 + Math.random() * 2);
+    
+    // Glow effect
+    particle.fillStyle(color, 0.3);
+    particle.fillCircle(0, 0, 5 + Math.random() * 3);
+    
+    const particleData = {
+      graphic: particle,
+      velocityX: Math.cos(angle) * (50 + Math.random() * 30),
+      velocityY: Math.sin(angle) * (50 + Math.random() * 30),
+      life: 1,
+      decay: 0.02 + Math.random() * 0.02
+    };
+    
+    this.trailParticles.push(particleData);
+    
+    // Limitar cantidad de partículas
+    while (this.trailParticles.length > this.maxTrailParticles) {
+      const old = this.trailParticles.shift();
+      if (old.graphic) old.graphic.destroy();
+    }
+  }
+  
+  updateTrailParticles(delta) {
+    const dt = delta / 1000;
+    
+    for (let i = this.trailParticles.length - 1; i >= 0; i--) {
+      const p = this.trailParticles[i];
+      
+      // Mover partícula
+      p.graphic.x += p.velocityX * dt;
+      p.graphic.y += p.velocityY * dt;
+      
+      // Reducir velocidad
+      p.velocityX *= 0.95;
+      p.velocityY *= 0.95;
+      
+      // Reducir vida
+      p.life -= p.decay;
+      p.graphic.alpha = p.life;
+      p.graphic.scale = p.life * 0.8 + 0.2;
+      
+      // Eliminar si vida agotada
+      if (p.life <= 0) {
+        p.graphic.destroy();
+        this.trailParticles.splice(i, 1);
+      }
+    }
   }
   
   update(time, delta) {
@@ -196,6 +265,16 @@ export class Player extends Phaser.GameObjects.Container {
     // Actualizar glow del motor basado en movimiento
     const intensity = Math.min(distance / 100, 1);
     this.updateEngineGlow(0.5 + intensity * 0.5);
+    
+    // Emitir partículas de trail cuando se mueve
+    this.trailEmitTimer += delta;
+    if (distance > 10 && this.trailEmitTimer >= this.trailEmitRate) {
+      this.emitTrailParticle();
+      this.trailEmitTimer = 0;
+    }
+    
+    // Actualizar partículas de trail
+    this.updateTrailParticles(delta);
     
     // Recargar misiles uno a la vez si el cooldown terminó y hay espacio disponible
     if (this.missileCount < this.maxMissiles) {
