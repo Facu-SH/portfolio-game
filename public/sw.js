@@ -1,30 +1,11 @@
 // Service Worker para Portfolio PWA
 const CACHE_NAME = 'portfolio-v1';
-const OFFLINE_URL = '/offline.html';
-
-// Recursos a cachear en la instalación
-const PRECACHE_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/favicon.svg'
-];
 
 // Instalación del Service Worker
 self.addEventListener('install', (event) => {
   console.log('[SW] Instalando Service Worker...');
-  
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('[SW] Pre-cacheando recursos');
-        return cache.addAll(PRECACHE_ASSETS);
-      })
-      .then(() => {
-        // Activar inmediatamente sin esperar
-        return self.skipWaiting();
-      })
-  );
+  // Activar inmediatamente sin esperar
+  self.skipWaiting();
 });
 
 // Activación del Service Worker
@@ -79,11 +60,6 @@ self.addEventListener('fetch', (event) => {
             return cachedResponse;
           }
           
-          // Si es una navegación, mostrar página offline
-          if (event.request.mode === 'navigate') {
-            return caches.match(OFFLINE_URL);
-          }
-          
           // Para otros recursos, devolver error silencioso
           return new Response('', { status: 408, statusText: 'Offline' });
         });
@@ -99,4 +75,3 @@ self.addEventListener('message', (event) => {
 });
 
 console.log('[SW] Service Worker cargado');
-

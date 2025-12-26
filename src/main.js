@@ -113,8 +113,9 @@ document.addEventListener('DOMContentLoaded', () => {
 async function registerServiceWorker() {
   if ('serviceWorker' in navigator) {
     try {
-      const registration = await navigator.serviceWorker.register('/sw.js', {
-        scope: '/'
+      const swPath = import.meta.env.BASE_URL + 'sw.js';
+      const registration = await navigator.serviceWorker.register(swPath, {
+        scope: import.meta.env.BASE_URL
       });
       
       console.log('📱 Service Worker registrado:', registration.scope);
