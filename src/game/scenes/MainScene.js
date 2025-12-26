@@ -2047,16 +2047,34 @@ export class MainScene extends Phaser.Scene {
     });
     
     hitArea.on('pointerdown', () => {
-      // Mostrar pantalla de carga antes de recargar
+      // Mostrar pantalla de carga INMEDIATAMENTE antes de recargar
       const loadingScreen = document.getElementById('loading-screen');
       if (loadingScreen) {
+        // Forzar visibilidad inmediata con estilos inline para evitar cualquier frame visible
+        loadingScreen.style.cssText = `
+          position: fixed !important;
+          inset: 0 !important;
+          z-index: 99999 !important;
+          background: #0c0c14 !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          opacity: 1 !important;
+          visibility: visible !important;
+        `;
         loadingScreen.classList.add('visible');
       }
       
-      // Recargar la página después de un pequeño delay para mostrar la pantalla de carga
-      setTimeout(() => {
+      // Ocultar el body inmediatamente para evitar ver contenido
+      if (document.body) {
+        document.body.style.opacity = '0';
+        document.body.style.overflow = 'hidden';
+      }
+      
+      // Recargar la página en el siguiente frame (sin delay visible)
+      requestAnimationFrame(() => {
         window.location.reload();
-      }, 300);
+      });
     });
     
     this.victoryUI.add([bg, statsPanel, victoryText, mainStats, enemiesTitle, enemyContainer, upgradesTitle, upgradeContainer, timelineTitle, timelineContainer, message, backBtn, backText, hitArea]);
@@ -2436,16 +2454,34 @@ export class MainScene extends Phaser.Scene {
     });
     
     hitArea.on('pointerdown', () => {
-      // Mostrar pantalla de carga antes de recargar
+      // Mostrar pantalla de carga INMEDIATAMENTE antes de recargar
       const loadingScreen = document.getElementById('loading-screen');
       if (loadingScreen) {
+        // Forzar visibilidad inmediata con estilos inline para evitar cualquier frame visible
+        loadingScreen.style.cssText = `
+          position: fixed !important;
+          inset: 0 !important;
+          z-index: 99999 !important;
+          background: #0c0c14 !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          opacity: 1 !important;
+          visibility: visible !important;
+        `;
         loadingScreen.classList.add('visible');
       }
       
-      // Recargar la página después de un pequeño delay para mostrar la pantalla de carga
-      setTimeout(() => {
+      // Ocultar el body inmediatamente para evitar ver contenido
+      if (document.body) {
+        document.body.style.opacity = '0';
+        document.body.style.overflow = 'hidden';
+      }
+      
+      // Recargar la página en el siguiente frame (sin delay visible)
+      requestAnimationFrame(() => {
         window.location.reload();
-      }, 300);
+      });
     });
     
     this.gameOverUI.add([bg, statsPanel, gameOverText, mainStats, enemiesTitle, enemyContainer, upgradesTitle, upgradeContainer, timelineTitle, timelineContainer, deathInfoText, backBtn, backText, hitArea]);
