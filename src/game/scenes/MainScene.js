@@ -3062,7 +3062,7 @@ export class MainScene extends Phaser.Scene {
     
     // Panel central
     const panelWidth = 400;
-    const panelHeight = 300;
+    const panelHeight = 420;
     const panel = this.add.graphics();
     panel.fillStyle(0x001122, 0.8);
     panel.fillRoundedRect(-panelWidth / 2, -panelHeight / 2, panelWidth, panelHeight, 15);
@@ -3070,7 +3070,7 @@ export class MainScene extends Phaser.Scene {
     panel.strokeRoundedRect(-panelWidth / 2, -panelHeight / 2, panelWidth, panelHeight, 15);
     
     // Título de pausa
-    const pauseText = this.add.text(0, -100, '⏸️ PAUSA', {
+    const pauseText = this.add.text(0, -160, '⏸️ PAUSA', {
       fontFamily: '"Orbitron", sans-serif',
       fontSize: '42px',
       color: '#00ffff',
@@ -3095,7 +3095,7 @@ export class MainScene extends Phaser.Scene {
     const seconds = Math.floor((gameTime % 60000) / 1000);
     const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
     
-    const statsText = this.add.text(0, -30,
+    const statsText = this.add.text(0, -80,
       `⏱️ Tiempo: ${timeString}\n⭐ Puntos: ${this.score.toLocaleString()}\n💎 Cristales: ${this.crystals}`,
       {
         fontFamily: '"JetBrains Mono", monospace',
@@ -3110,35 +3110,35 @@ export class MainScene extends Phaser.Scene {
     // Botón de reanudar
     const resumeBtn = this.add.graphics();
     resumeBtn.fillStyle(0x003333, 1);
-    resumeBtn.fillRoundedRect(-140, 40, 280, 50, 10);
+    resumeBtn.fillRoundedRect(-140, 0, 280, 50, 10);
     resumeBtn.lineStyle(2, 0x00ffff, 1);
-    resumeBtn.strokeRoundedRect(-140, 40, 280, 50, 10);
+    resumeBtn.strokeRoundedRect(-140, 0, 280, 50, 10);
     
-    const resumeText = this.add.text(0, 65, '▶️ REANUDAR (ESC)', {
+    const resumeText = this.add.text(0, 25, '▶️ REANUDAR (ESC)', {
       fontFamily: '"Orbitron", sans-serif',
       fontSize: '18px',
       color: '#00ffff'
     });
     resumeText.setOrigin(0.5);
     
-    const resumeHitArea = this.add.rectangle(0, 65, 280, 50, 0x000000, 0);
+    const resumeHitArea = this.add.rectangle(0, 25, 280, 50, 0x000000, 0);
     resumeHitArea.setInteractive({ useHandCursor: true });
     
     resumeHitArea.on('pointerover', () => {
       resumeBtn.clear();
       resumeBtn.fillStyle(0x004444, 1);
-      resumeBtn.fillRoundedRect(-140, 40, 280, 50, 10);
+      resumeBtn.fillRoundedRect(-140, 0, 280, 50, 10);
       resumeBtn.lineStyle(3, 0x00ffff, 1);
-      resumeBtn.strokeRoundedRect(-140, 40, 280, 50, 10);
+      resumeBtn.strokeRoundedRect(-140, 0, 280, 50, 10);
       resumeText.setScale(1.05);
     });
     
     resumeHitArea.on('pointerout', () => {
       resumeBtn.clear();
       resumeBtn.fillStyle(0x003333, 1);
-      resumeBtn.fillRoundedRect(-140, 40, 280, 50, 10);
+      resumeBtn.fillRoundedRect(-140, 0, 280, 50, 10);
       resumeBtn.lineStyle(2, 0x00ffff, 1);
-      resumeBtn.strokeRoundedRect(-140, 40, 280, 50, 10);
+      resumeBtn.strokeRoundedRect(-140, 0, 280, 50, 10);
       resumeText.setScale(1);
     });
     
@@ -3153,21 +3153,21 @@ export class MainScene extends Phaser.Scene {
     const drawMuteBtn = (muted, hover = false) => {
       muteBtn.clear();
       muteBtn.fillStyle(hover ? 0x333344 : 0x222233, 1);
-      muteBtn.fillRoundedRect(-140, 110, 280, 50, 10);
+      muteBtn.fillRoundedRect(-140, 65, 280, 50, 10);
       muteBtn.lineStyle(hover ? 3 : 2, muted ? 0xff6666 : 0x66ff66, 1);
-      muteBtn.strokeRoundedRect(-140, 110, 280, 50, 10);
+      muteBtn.strokeRoundedRect(-140, 65, 280, 50, 10);
     };
     
     drawMuteBtn(isMuted);
     
-    const muteText = this.add.text(0, 135, isMuted ? '🔇 ACTIVAR SONIDO' : '🔊 SILENCIAR', {
+    const muteText = this.add.text(0, 90, isMuted ? '🔇 ACTIVAR SONIDO' : '🔊 SILENCIAR', {
       fontFamily: '"Orbitron", sans-serif',
       fontSize: '18px',
       color: isMuted ? '#ff6666' : '#66ff66'
     });
     muteText.setOrigin(0.5);
     
-    const muteHitArea = this.add.rectangle(0, 135, 280, 50, 0x000000, 0);
+    const muteHitArea = this.add.rectangle(0, 90, 280, 50, 0x000000, 0);
     muteHitArea.setInteractive({ useHandCursor: true });
     
     muteHitArea.on('pointerover', () => {
@@ -3190,35 +3190,35 @@ export class MainScene extends Phaser.Scene {
     // Botón de volver a la web
     const exitBtn = this.add.graphics();
     exitBtn.fillStyle(0x330011, 1);
-    exitBtn.fillRoundedRect(-140, 180, 280, 50, 10);
+    exitBtn.fillRoundedRect(-140, 130, 280, 50, 10);
     exitBtn.lineStyle(2, 0xff0066, 1);
-    exitBtn.strokeRoundedRect(-140, 180, 280, 50, 10);
+    exitBtn.strokeRoundedRect(-140, 130, 280, 50, 10);
     
-    const exitText = this.add.text(0, 205, '🌐 VOLVER A LA WEB', {
+    const exitText = this.add.text(0, 155, '🌐 VOLVER A LA WEB', {
       fontFamily: '"Orbitron", sans-serif',
       fontSize: '18px',
       color: '#ff0066'
     });
     exitText.setOrigin(0.5);
     
-    const exitHitArea = this.add.rectangle(0, 205, 280, 50, 0x000000, 0);
+    const exitHitArea = this.add.rectangle(0, 155, 280, 50, 0x000000, 0);
     exitHitArea.setInteractive({ useHandCursor: true });
     
     exitHitArea.on('pointerover', () => {
       exitBtn.clear();
       exitBtn.fillStyle(0x550033, 1);
-      exitBtn.fillRoundedRect(-140, 180, 280, 50, 10);
+      exitBtn.fillRoundedRect(-140, 130, 280, 50, 10);
       exitBtn.lineStyle(3, 0xff0066, 1);
-      exitBtn.strokeRoundedRect(-140, 180, 280, 50, 10);
+      exitBtn.strokeRoundedRect(-140, 130, 280, 50, 10);
       exitText.setScale(1.05);
     });
     
     exitHitArea.on('pointerout', () => {
       exitBtn.clear();
       exitBtn.fillStyle(0x330011, 1);
-      exitBtn.fillRoundedRect(-140, 180, 280, 50, 10);
+      exitBtn.fillRoundedRect(-140, 130, 280, 50, 10);
       exitBtn.lineStyle(2, 0xff0066, 1);
-      exitBtn.strokeRoundedRect(-140, 180, 280, 50, 10);
+      exitBtn.strokeRoundedRect(-140, 130, 280, 50, 10);
       exitText.setScale(1);
     });
     
