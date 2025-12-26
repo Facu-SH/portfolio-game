@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config/gameConfig.js';
+import { audioManager } from '../audio/AudioManager.js';
 
 export class Bullet extends Phaser.GameObjects.Graphics {
   constructor(scene, x, y, angle, isEnemy = false, damage = null) {
@@ -162,6 +163,9 @@ export class Missile extends Phaser.GameObjects.Container {
   explode() {
     if (this.hasExploded || !this.scene || !this.active) return;
     this.hasExploded = true;
+    
+    // Sonido de explosión
+    audioManager.playMissileExplosion();
     
     // Guardar posición antes de destruir
     const explosionX = this.x;

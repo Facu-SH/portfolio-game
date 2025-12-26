@@ -131,6 +131,13 @@
   <!-- Skip link para accesibilidad -->
   <a href="#app" class="skip-link">Saltar al contenido principal</a>
   
+  <!-- Fondo de partículas espaciales -->
+  <div id="particle-container" class="particle-container">
+    <div class="nebula nebula-1"></div>
+    <div class="nebula nebula-2"></div>
+    <div class="nebula nebula-3"></div>
+  </div>
+  
   <!-- Pantalla de carga -->
   <div id="loading-screen" class="loading-screen">
     <div class="loading-content">
@@ -154,6 +161,34 @@
     <span>🚀</span>
   </div>
 
+  <!-- Indicador de Progreso de Conquistas -->
+  <div id="conquest-progress" class="conquest-progress">
+    <div class="conquest-progress-header">
+      <span class="conquest-progress-title">🏆 Progreso</span>
+      <span class="conquest-progress-count" id="conquest-count">0/3</span>
+    </div>
+    <div class="conquest-progress-bar">
+      <div class="conquest-progress-fill" id="conquest-fill"></div>
+    </div>
+    <div class="conquest-sections">
+      <div class="conquest-section" data-section="about">
+        <span class="conquest-icon">📋</span>
+        <span class="conquest-label">Sobre Mí</span>
+        <span class="conquest-status">⭕</span>
+      </div>
+      <div class="conquest-section" data-section="experience">
+        <span class="conquest-icon">💼</span>
+        <span class="conquest-label">Experiencia</span>
+        <span class="conquest-status">⭕</span>
+      </div>
+      <div class="conquest-section" data-section="portfolio">
+        <span class="conquest-icon">🎨</span>
+        <span class="conquest-label">Portfolio</span>
+        <span class="conquest-status">⭕</span>
+      </div>
+    </div>
+  </div>
+
   <!-- Navegación principal -->
   <nav class="main-nav">
     <div class="nav-logo">
@@ -175,6 +210,65 @@
   
   <!-- Estrellas de fondo decorativas -->
   <div class="conquest-stars" id="conquest-stars"></div>
+
+  <!-- Modal de Onboarding -->
+  <div id="onboarding-modal" class="onboarding-modal">
+    <div class="onboarding-overlay"></div>
+    <div class="onboarding-content">
+      <div class="onboarding-header">
+        <span class="onboarding-icon">🚀</span>
+        <h2>¡Bienvenido a mi Portfolio!</h2>
+      </div>
+      
+      <div class="onboarding-slides">
+        <!-- Slide 1 -->
+        <div class="onboarding-slide active" data-slide="0">
+          <div class="slide-icon">🌟</div>
+          <h3>Portfolio Interactivo</h3>
+          <p>Este no es un portfolio común. Explora mi trabajo mientras te sumerges en una experiencia espacial única.</p>
+        </div>
+        
+        <!-- Slide 2 -->
+        <div class="onboarding-slide" data-slide="1">
+          <div class="slide-icon">🎮</div>
+          <h3>Minijuego Integrado</h3>
+          <p>Haz clic en <strong>"Iniciar Juego"</strong> para defender las secciones del portfolio. Destruye spawners, derrota enemigos y desbloquea recompensas.</p>
+        </div>
+        
+        <!-- Slide 3 -->
+        <div class="onboarding-slide" data-slide="2">
+          <div class="slide-icon">⭐</div>
+          <h3>Sistema de Conquistas</h3>
+          <p>Completa secciones del juego para ganar <strong>estrellas</strong> en la navegación y desbloquear elementos decorativos especiales.</p>
+        </div>
+        
+        <!-- Slide 4 -->
+        <div class="onboarding-slide" data-slide="3">
+          <div class="slide-icon">💎</div>
+          <h3>Mejoras y Progresión</h3>
+          <p>Recolecta <strong>cristales</strong> de los enemigos para comprar mejoras entre oleadas. ¡Prepárate para el jefe final!</p>
+        </div>
+      </div>
+      
+      <div class="onboarding-dots">
+        <span class="onboarding-dot active" data-slide="0"></span>
+        <span class="onboarding-dot" data-slide="1"></span>
+        <span class="onboarding-dot" data-slide="2"></span>
+        <span class="onboarding-dot" data-slide="3"></span>
+      </div>
+      
+      <div class="onboarding-footer">
+        <label class="onboarding-checkbox">
+          <input type="checkbox" id="onboarding-dont-show">
+          <span>No mostrar de nuevo</span>
+        </label>
+        <div class="onboarding-actions">
+          <button class="onboarding-btn secondary" id="onboarding-skip">Saltar</button>
+          <button class="onboarding-btn primary" id="onboarding-next">Siguiente</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Contenedor principal de páginas -->
   <main id="app">
@@ -216,10 +310,10 @@
           <div class="about-info">
             <div class="greeting">
               <span class="wave">👋</span>
-              <span class="greeting-text">Hola, soy</span>
+              <span class="greeting-text typing-text" data-text="Hola, soy"></span>
             </div>
-            <h1 class="name">Tu Nombre</h1>
-            <h2 class="title">Desarrollador Back-end & Videojuegos</h2>
+            <h1 class="name typing-text" data-text="Tu Nombre"></h1>
+            <h2 class="title typing-text" data-text="Desarrollador Back-end & Videojuegos"></h2>
             
             <p class="bio">
               Apasionado por crear experiencias interactivas y sistemas escalables. 

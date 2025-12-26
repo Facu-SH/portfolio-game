@@ -64,6 +64,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // Inicializar sistema de recompensas
   initConquestRewards();
   
+  // Mostrar onboarding para usuarios nuevos
+  initOnboarding();
+  
+  // Inicializar efecto de typing
+  initTypingEffect();
+  
   // Detectar si es móvil
   if (isMobile()) {
     showMobileWarning();
@@ -86,6 +92,9 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Registrar Service Worker
   registerServiceWorker();
+  
+  // Inicializar fondo de partículas
+  initParticleBackground();
   
   // Ocultar pantalla de carga cuando todo esté listo
   hideLoadingScreen();
@@ -121,34 +130,346 @@ async function registerServiceWorker() {
 }
 
 // ============================================
+// PARTICLE BACKGROUND SYSTEM
+// ============================================
+
+function initParticleBackground() {
+  const container = document.getElementById('particle-container');
+  if (!container) return;
+  
+  // Configuración de partículas
+  const config = {
+    starCount: 80,
+    shootingStarInterval: 8000,
+    starSizes: ['small', 'medium', 'large'],
+    starColors: ['', 'colored-cyan', 'colored-magenta', 'colored-indigo']
+  };
+  
+  // Crear estrellas con animación escalonada
+  for (let i = 0; i < config.starCount; i++) {
+    createStar(container, config, i);
+  }
+  
+  // Crear estrellas fugaces ocasionales
+  setInterval(() => {
+    if (Math.random() > 0.5) {
+      createShootingStar(container);
+    }
+  }, config.shootingStarInterval);
+  
+  // Crear una estrella fugaz inicial después de un momento
+  setTimeout(() => createShootingStar(container), 3000);
+}
+
+function createStar(container, config, index) {
+  const star = document.createElement('div');
+  star.className = 'star';
+  
+  // Tamaño aleatorio (más estrellas pequeñas que grandes)
+  const sizeRandom = Math.random();
+  let size;
+  if (sizeRandom < 0.7) {
+    size = 'small';
+  } else if (sizeRandom < 0.9) {
+    size = 'medium';
+  } else {
+    size = 'large';
+  }
+  star.classList.add(size);
+  
+  // Color aleatorio (mayoría blancas)
+  if (Math.random() > 0.85) {
+    const colors = config.starColors.filter(c => c !== '');
+    star.classList.add(colors[Math.floor(Math.random() * colors.length)]);
+  }
+  
+  // Posición inicial aleatoria
+  star.style.left = `${Math.random() * 100}%`;
+  star.style.top = `${Math.random() * 100}%`;
+  
+  // Duración de animación variable (más lenta = más atmosférico)
+  const duration = 20 + Math.random() * 40;
+  star.style.animationDuration = `${duration}s`;
+  
+  // Delay escalonado para que no todas empiecen a la vez
+  const delay = (index * 0.3) + Math.random() * 10;
+  star.style.animationDelay = `${delay}s`;
+  
+  container.appendChild(star);
+  
+  // Recrear estrella cuando termine su animación
+  star.addEventListener('animationend', () => {
+    star.remove();
+    createStar(container, config, 0);
+  });
+}
+
+function createShootingStar(container) {
+  const shootingStar = document.createElement('div');
+  shootingStar.className = 'shooting-star';
+  
+  // Posición aleatoria en la parte superior
+  shootingStar.style.left = `${20 + Math.random() * 60}%`;
+  shootingStar.style.top = `${Math.random() * 40}%`;
+  
+  // Ángulo de caída variable
+  const angle = -20 - Math.random() * 30;
+  shootingStar.style.transform = `rotate(${angle}deg)`;
+  
+  // Color ocasional
+  if (Math.random() > 0.7) {
+    const colors = ['var(--accent-secondary)', 'var(--accent-primary)', 'var(--accent-tertiary)'];
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    shootingStar.style.background = `linear-gradient(90deg, ${color}, transparent)`;
+  }
+  
+  container.appendChild(shootingStar);
+  
+  // Remover después de la animación
+  setTimeout(() => {
+    if (shootingStar.parentNode) shootingStar.remove();
+  }, 1500);
+}
+
+// ============================================
+// TYPING EFFECT
+// ============================================
+
+function initTypingEffect() {
+  const typingElements = document.querySelectorAll('.typing-text[data-text]');
+  if (!typingElements.length) return;
+  
+  // Verificar si prefers-reduced-motion está activo
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  
+  if (prefersReducedMotion) {
+    // Si el usuario prefiere menos movimiento, mostrar texto directamente
+    typingElements.forEach(el => {
+      el.textContent = el.dataset.text;
+      el.classList.add('typing-complete');
+    });
+    return;
+  }
+  
+  // Configuración de typing
+  const config = {
+    charDelay: 50,        // ms entre caracteres
+    startDelay: 500,      // ms antes de empezar
+    betweenDelay: 300,    // ms entre elementos
+    cursorDuration: 2000  // ms que el cursor permanece visible después
+  };
+  
+  let currentIndex = 0;
+  let totalDelay = config.startDelay;
+  
+  function typeElement(element, startDelay) {
+    const text = element.dataset.text;
+    let charIndex = 0;
+    
+    setTimeout(() => {
+      const typeInterval = setInterval(() => {
+        element.textContent = text.substring(0, charIndex + 1);
+        charIndex++;
+        
+        if (charIndex >= text.length) {
+          clearInterval(typeInterval);
+          
+          // Mantener cursor visible un momento, luego ocultarlo
+          setTimeout(() => {
+            element.classList.add('typing-complete');
+          }, config.cursorDuration);
+        }
+      }, config.charDelay);
+    }, startDelay);
+    
+    // Retornar duración total de este elemento
+    return text.length * config.charDelay;
+  }
+  
+  // Iniciar typing secuencialmente
+  typingElements.forEach((el, index) => {
+    const duration = typeElement(el, totalDelay);
+    totalDelay += duration + config.betweenDelay;
+    
+    // Quitar cursor de elementos anteriores cuando empiece el siguiente
+    if (index > 0) {
+      const prevEl = typingElements[index - 1];
+      setTimeout(() => {
+        prevEl.classList.add('no-cursor');
+      }, totalDelay - config.betweenDelay - 100);
+    }
+  });
+}
+
+// ============================================
+// ONBOARDING MODAL
+// ============================================
+
+function initOnboarding() {
+  const modal = document.getElementById('onboarding-modal');
+  if (!modal) return;
+  
+  // Verificar si el usuario ya vio el onboarding
+  const hasSeenOnboarding = localStorage.getItem('portfolio_onboarding_seen');
+  if (hasSeenOnboarding) return;
+  
+  const slides = modal.querySelectorAll('.onboarding-slide');
+  const dots = modal.querySelectorAll('.onboarding-dot');
+  const nextBtn = document.getElementById('onboarding-next');
+  const skipBtn = document.getElementById('onboarding-skip');
+  const dontShowCheckbox = document.getElementById('onboarding-dont-show');
+  
+  let currentSlide = 0;
+  const totalSlides = slides.length;
+  
+  // Mostrar modal después de un pequeño delay
+  setTimeout(() => {
+    modal.classList.add('active');
+  }, 1000);
+  
+  function goToSlide(index) {
+    // Marcar slide anterior como exit
+    slides[currentSlide].classList.remove('active');
+    slides[currentSlide].classList.add('exit-left');
+    
+    // Activar nuevo slide
+    setTimeout(() => {
+      slides.forEach(slide => slide.classList.remove('exit-left'));
+      currentSlide = index;
+      slides[currentSlide].classList.add('active');
+      
+      // Actualizar dots
+      dots.forEach((dot, i) => {
+        dot.classList.toggle('active', i === currentSlide);
+      });
+      
+      // Actualizar texto del botón
+      if (currentSlide === totalSlides - 1) {
+        nextBtn.textContent = '¡Empezar!';
+      } else {
+        nextBtn.textContent = 'Siguiente';
+      }
+    }, 150);
+  }
+  
+  function closeModal() {
+    modal.classList.remove('active');
+    
+    // Guardar preferencia si checkbox está marcado
+    if (dontShowCheckbox.checked) {
+      localStorage.setItem('portfolio_onboarding_seen', 'true');
+    } else {
+      // Si no marcó "no mostrar", guardar que ya lo vio esta sesión
+      sessionStorage.setItem('portfolio_onboarding_seen_session', 'true');
+    }
+    
+    // Remover modal del DOM después de la animación
+    setTimeout(() => {
+      modal.remove();
+    }, 500);
+  }
+  
+  // Event listeners
+  nextBtn.addEventListener('click', () => {
+    if (currentSlide < totalSlides - 1) {
+      goToSlide(currentSlide + 1);
+    } else {
+      closeModal();
+    }
+  });
+  
+  skipBtn.addEventListener('click', closeModal);
+  
+  // Clic en dots para navegar
+  dots.forEach((dot, index) => {
+    dot.addEventListener('click', () => {
+      if (index !== currentSlide) {
+        goToSlide(index);
+      }
+    });
+  });
+  
+  // Cerrar con Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal.classList.contains('active')) {
+      closeModal();
+    }
+  });
+  
+  // Cerrar al hacer clic en overlay
+  modal.querySelector('.onboarding-overlay').addEventListener('click', closeModal);
+}
+
+// ============================================
 // NAVEGACIÓN ENTRE PÁGINAS
 // ============================================
+
+let isTransitioning = false;
 
 function initNavigation() {
   const navLinks = document.querySelectorAll('.nav-link');
   const ctaButtons = document.querySelectorAll('.btn[data-page]');
   const pages = document.querySelectorAll('.page');
   
+  // Crear contenedor de líneas warp
+  createWarpLinesContainer();
+  
   function navigateTo(pageId) {
+    if (isTransitioning) return;
+    
+    const currentPage = document.querySelector('.page.active');
+    const targetPage = document.getElementById(`page-${pageId}`);
+    
+    // Si ya estamos en la página, no hacer nada
+    if (currentPage === targetPage) return;
+    
     // Actualizar links activos
     navLinks.forEach(link => {
       link.classList.toggle('active', link.dataset.page === pageId);
     });
     
-    // Mostrar/ocultar páginas con animación
-    pages.forEach(page => {
-      const isTarget = page.id === `page-${pageId}`;
+    // Verificar si prefers-reduced-motion
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    
+    if (prefersReducedMotion) {
+      // Transición simple sin animación
+      if (currentPage) currentPage.classList.remove('active');
+      targetPage.classList.add('active');
+      window.scrollTo({ top: 0, behavior: 'instant' });
+      setTimeout(() => observeActivePageElements(), 50);
+    } else {
+      // Transición warp animada
+      isTransitioning = true;
       
-      if (isTarget && !page.classList.contains('active')) {
-        page.classList.add('active');
-        // Scroll al inicio de la página
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        // Revelar elementos de la nueva página
-        setTimeout(() => observeActivePageElements(), 50);
-      } else if (!isTarget) {
-        page.classList.remove('active');
+      // Mostrar líneas de velocidad
+      triggerWarpLines();
+      
+      // Animar salida de página actual
+      if (currentPage) {
+        currentPage.classList.add('warp-exit');
       }
-    });
+      
+      // Después de la animación de salida, cambiar páginas
+      setTimeout(() => {
+        if (currentPage) {
+          currentPage.classList.remove('active', 'warp-exit');
+        }
+        
+        // Scroll instantáneo al top antes de mostrar nueva página
+        window.scrollTo({ top: 0, behavior: 'instant' });
+        
+        // Mostrar nueva página con animación de entrada
+        targetPage.classList.add('active', 'warp-enter');
+        
+        // Limpiar clase de animación después
+        setTimeout(() => {
+          targetPage.classList.remove('warp-enter');
+          isTransitioning = false;
+          observeActivePageElements();
+        }, 600);
+        
+      }, 350);
+    }
     
     // Guardar página actual en URL
     history.pushState({ page: pageId }, '', `#${pageId}`);
@@ -184,6 +505,46 @@ function initNavigation() {
   if (initialPage !== 'about') {
     navigateTo(initialPage);
   }
+}
+
+function createWarpLinesContainer() {
+  const container = document.createElement('div');
+  container.className = 'warp-lines';
+  container.id = 'warp-lines';
+  document.body.appendChild(container);
+}
+
+function triggerWarpLines() {
+  const container = document.getElementById('warp-lines');
+  if (!container) return;
+  
+  // Limpiar líneas anteriores
+  container.innerHTML = '';
+  container.classList.add('active');
+  
+  // Crear líneas de velocidad
+  const lineCount = 15;
+  for (let i = 0; i < lineCount; i++) {
+    const line = document.createElement('div');
+    line.className = 'warp-line';
+    
+    // Posición horizontal aleatoria
+    line.style.left = `${Math.random() * 100}%`;
+    
+    // Delay escalonado
+    line.style.animationDelay = `${Math.random() * 0.2}s`;
+    
+    // Variación de color
+    const colors = ['var(--accent-secondary)', 'var(--accent-primary)', 'var(--accent-tertiary)', 'white'];
+    line.style.background = `linear-gradient(to bottom, transparent, ${colors[Math.floor(Math.random() * colors.length)]}, transparent)`;
+    
+    container.appendChild(line);
+  }
+  
+  // Ocultar después de la animación
+  setTimeout(() => {
+    container.classList.remove('active');
+  }, 500);
 }
 
 // ============================================
@@ -460,6 +821,9 @@ function initConquestRewards() {
   // Aplicar recompensas visuales
   applyConquestRewards(conquests);
   
+  // Actualizar indicador de progreso
+  updateConquestProgress(conquests);
+  
   // Crear estrellas de fondo si hay conquistas
   if (Object.values(conquests).some(v => v)) {
     createConquestStars();
@@ -496,13 +860,66 @@ function conquestSection(sectionId) {
   conquests[sectionId] = true;
   saveConquests(conquests);
   applyConquestRewards(conquests);
+  updateConquestProgress(conquests);
   
   // Si es la primera conquista, crear las estrellas
   if (Object.values(conquests).filter(v => v).length === 1) {
     createConquestStars();
   }
   
+  // Mostrar notificación de conquista
+  showConquestNotification(sectionId);
+  
   console.log(`🏆 Sección "${sectionId}" conquistada!`);
+}
+
+function updateConquestProgress(conquests) {
+  const progressContainer = document.getElementById('conquest-progress');
+  if (!progressContainer) return;
+  
+  const completed = Object.values(conquests).filter(v => v).length;
+  const total = Object.keys(conquests).length;
+  
+  // Mostrar el indicador si hay progreso
+  if (completed > 0 || document.querySelector('.game-active')) {
+    progressContainer.classList.add('visible');
+  }
+  
+  // Actualizar contador
+  const countEl = document.getElementById('conquest-count');
+  if (countEl) {
+    countEl.textContent = `${completed}/${total}`;
+  }
+  
+  // Actualizar barra de progreso
+  const fillEl = document.getElementById('conquest-fill');
+  if (fillEl) {
+    fillEl.style.width = `${(completed / total) * 100}%`;
+  }
+  
+  // Actualizar estado de cada sección
+  Object.keys(conquests).forEach(section => {
+    const sectionEl = progressContainer.querySelector(`[data-section="${section}"]`);
+    if (sectionEl) {
+      if (conquests[section]) {
+        sectionEl.classList.add('completed');
+        sectionEl.querySelector('.conquest-status').textContent = '⭐';
+      } else {
+        sectionEl.classList.remove('completed');
+        sectionEl.querySelector('.conquest-status').textContent = '⭕';
+      }
+    }
+  });
+}
+
+function showConquestNotification(sectionId) {
+  const names = {
+    about: 'Sobre Mí',
+    experience: 'Experiencia',
+    portfolio: 'Portfolio'
+  };
+  
+  showToast(`🏆 ¡${names[sectionId]} conquistado!`, 'success', 4000);
 }
 
 function applyConquestRewards(conquests) {

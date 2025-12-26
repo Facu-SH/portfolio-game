@@ -7,6 +7,7 @@ import { Boss } from '../entities/Boss.js';
 import { Bullet, Missile } from '../entities/Projectile.js';
 import { Crystal, HealthDrop } from '../entities/Collectible.js';
 import { UPGRADES, UPGRADE_ORDER, getUpgradeCost, getUpgradeValue } from '../config/upgrades.js';
+import { audioManager } from '../audio/AudioManager.js';
 
 export class MainScene extends Phaser.Scene {
   constructor() {
@@ -459,10 +460,11 @@ export class MainScene extends Phaser.Scene {
   // ============================================
   
   spawnPowerUp(x, y) {
-    // 5% de probabilidad de spawn
-    if (Math.random() > 0.05) return;
+    // 8% de probabilidad de spawn (aumentado de 5%)
+    if (Math.random() > 0.08) return;
     
-    const powerUpTypes = ['shield', 'speedBoost', 'damageBoost'];
+    // Agregar magnetismo a la lista
+    const powerUpTypes = ['shield', 'speedBoost', 'damageBoost', 'magnet'];
     const type = powerUpTypes[Math.floor(Math.random() * powerUpTypes.length)];
     
     this.createPowerUp(x, y, type);
@@ -476,46 +478,85 @@ export class MainScene extends Phaser.Scene {
     const colors = {
       shield: 0x00ffff,
       speedBoost: 0x00ff00,
-      damageBoost: 0xff0000
+      damageBoost: 0xff0000,
+      magnet: 0xff00ff
     };
     
     const icons = {
       shield: '🛡️',
       speedBoost: '⚡',
-      damageBoost: '💥'
+      damageBoost: '💥',
+      magnet: '🧲'
     };
     
-    // Gráficos
-    const gfx = this.add.graphics();
-    gfx.fillStyle(colors[type], 0.8);
-    gfx.fillCircle(0, 0, 15);
-    gfx.lineStyle(2, colors[type], 1);
-    gfx.strokeCircle(0, 0, 18);
+    // Gráficos mejorados con glow
+    const glow = this.add.graphics();
+    glow.fillStyle(colors[type], 0.2);
+    glow.fillCircle(0, 0, 28);
     
-    const icon = this.add.text(0, 0, icons[type], { fontSize: '16px' });
+    const gfx = this.add.graphics();
+    gfx.fillStyle(colors[type], 0.9);
+    gfx.fillCircle(0, 0, 18);
+    gfx.lineStyle(3, 0xffffff, 0.6);
+    gfx.strokeCircle(0, 0, 18);
+    gfx.lineStyle(2, colors[type], 1);
+    gfx.strokeCircle(0, 0, 22);
+    
+    const icon = this.add.text(0, 0, icons[type], { fontSize: '18px' });
     icon.setOrigin(0.5);
     
-    powerUp.add([gfx, icon]);
+    powerUp.add([glow, gfx, icon]);
     
-    // Física manual
-    powerUp.velocityY = 50;
-    
-    // Animación de flotación
+    // Animación de glow pulsante
     this.tweens.add({
-      targets: powerUp,
-      y: y + 10,
-      duration: 500,
+      targets: glow,
+      scale: { from: 0.8, to: 1.3 },
+      alpha: { from: 0.4, to: 0.1 },
+      duration: 800,
       yoyo: true,
       repeat: -1,
       ease: 'Sine.easeInOut'
     });
     
-    // Auto-destruir después de 10 segundos
-    this.time.delayedCall(10000, () => {
+    // Animación de flotación
+    this.tweens.add({
+      targets: powerUp,
+      y: y + 15,
+      duration: 600,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+    
+    // Rotación sutil
+    this.tweens.add({
+      targets: icon,
+      rotation: 0.2,
+      duration: 400,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+    
+    // Auto-destruir después de 12 segundos con parpadeo
+    this.time.delayedCall(9000, () => {
+      if (powerUp.active) {
+        this.tweens.add({
+          targets: powerUp,
+          alpha: { from: 1, to: 0.3 },
+          duration: 200,
+          yoyo: true,
+          repeat: 7
+        });
+      }
+    });
+    
+    this.time.delayedCall(12000, () => {
       if (powerUp.active) {
         this.tweens.add({
           targets: powerUp,
           alpha: 0,
+          scale: 1.5,
           duration: 300,
           onComplete: () => powerUp.destroy()
         });
@@ -531,7 +572,10 @@ export class MainScene extends Phaser.Scene {
   
   collectPowerUp(powerUp) {
     const type = powerUp.powerUpType;
-    const duration = 8000; // 8 segundos
+    const duration = 10000; // 10 segundos (aumentado de 8)
+    
+    // Reproducir sonido
+    audioManager.playHealthCollect();
     
     this.activePowerUps[type] = {
       active: true,
@@ -543,19 +587,28 @@ export class MainScene extends Phaser.Scene {
       case 'shield':
         this.player.isInvulnerable = true;
         this.showPowerUpEffect('🛡️ ¡ESCUDO ACTIVADO!', 0x00ffff);
+        this.createShieldVisual();
         break;
       case 'speedBoost':
-        this.player.lerpFactor = 0.16; // Doble de velocidad
+        this.player.lerpFactor = 0.18; // Más velocidad
         this.showPowerUpEffect('⚡ ¡VELOCIDAD BOOST!', 0x00ff00);
         break;
       case 'damageBoost':
         this.player.bulletDamage *= 2;
         this.showPowerUpEffect('💥 ¡DAÑO x2!', 0xff0000);
         break;
+      case 'magnet':
+        this.collectiblesAutoMagnetize = true;
+        this.magnetizeAllCollectibles();
+        this.showPowerUpEffect('🧲 ¡MAGNETISMO!', 0xff00ff);
+        break;
     }
     
-    // Efecto visual de recogida
-    this.createExplosion(powerUp.x, powerUp.y, 30, 0xffffff);
+    // Efecto visual de recogida mejorado
+    this.createExplosion(powerUp.x, powerUp.y, 40, 0xffffff);
+    
+    // Crear indicador de tiempo de power-up
+    this.showPowerUpTimer(type, duration);
     
     // Desactivar después de la duración
     this.time.delayedCall(duration, () => {
@@ -565,12 +618,136 @@ export class MainScene extends Phaser.Scene {
     powerUp.destroy();
   }
   
+  createShieldVisual() {
+    if (this.shieldVisual) {
+      this.shieldVisual.destroy();
+    }
+    
+    this.shieldVisual = this.add.graphics();
+    this.shieldVisual.setDepth(45);
+    
+    // El shield visual se actualizará en el update para seguir al jugador
+  }
+  
+  updateShieldVisual() {
+    if (!this.shieldVisual || !this.activePowerUps.shield?.active) {
+      if (this.shieldVisual) {
+        this.shieldVisual.destroy();
+        this.shieldVisual = null;
+      }
+      return;
+    }
+    
+    this.shieldVisual.clear();
+    this.shieldVisual.setPosition(this.player.x, this.player.y);
+    
+    // Escudo pulsante
+    const time = Date.now() * 0.005;
+    const radius = 30 + Math.sin(time) * 3;
+    const alpha = 0.3 + Math.sin(time * 2) * 0.1;
+    
+    this.shieldVisual.lineStyle(3, 0x00ffff, alpha + 0.3);
+    this.shieldVisual.strokeCircle(0, 0, radius);
+    this.shieldVisual.fillStyle(0x00ffff, alpha * 0.3);
+    this.shieldVisual.fillCircle(0, 0, radius);
+    
+    // Borde hexagonal
+    const hexRadius = radius + 5;
+    const hexAlpha = 0.2 + Math.sin(time * 3) * 0.1;
+    this.shieldVisual.lineStyle(1, 0x00ffff, hexAlpha);
+    for (let i = 0; i < 6; i++) {
+      const angle = (Math.PI * 2 / 6) * i - Math.PI / 2 + time * 0.5;
+      const x1 = Math.cos(angle) * hexRadius;
+      const y1 = Math.sin(angle) * hexRadius;
+      const nextAngle = (Math.PI * 2 / 6) * (i + 1) - Math.PI / 2 + time * 0.5;
+      const x2 = Math.cos(nextAngle) * hexRadius;
+      const y2 = Math.sin(nextAngle) * hexRadius;
+      this.shieldVisual.lineBetween(x1, y1, x2, y2);
+    }
+  }
+  
+  showPowerUpTimer(type, duration) {
+    const icons = {
+      shield: '🛡️',
+      speedBoost: '⚡',
+      damageBoost: '💥',
+      magnet: '🧲'
+    };
+    
+    const colors = {
+      shield: '#00ffff',
+      speedBoost: '#00ff00',
+      damageBoost: '#ff0000',
+      magnet: '#ff00ff'
+    };
+    
+    // Posición basada en power-ups activos
+    const activeCount = Object.values(this.activePowerUps).filter(p => p?.active).length;
+    const yPos = 160 + (activeCount - 1) * 35;
+    
+    // Crear indicador de tiempo
+    const timer = this.add.container(this.scale.width - 70, yPos);
+    timer.setDepth(100);
+    
+    const bg = this.add.graphics();
+    bg.fillStyle(0x000000, 0.7);
+    bg.fillRoundedRect(-50, -15, 100, 30, 5);
+    
+    const icon = this.add.text(-35, 0, icons[type], { fontSize: '16px' });
+    icon.setOrigin(0.5);
+    
+    const timerText = this.add.text(10, 0, `${(duration / 1000).toFixed(0)}s`, {
+      fontFamily: '"JetBrains Mono", monospace',
+      fontSize: '14px',
+      color: colors[type]
+    });
+    timerText.setOrigin(0.5);
+    
+    timer.add([bg, icon, timerText]);
+    
+    // Actualizar countdown
+    const startTime = this.time.now;
+    const updateTimer = this.time.addEvent({
+      delay: 100,
+      callback: () => {
+        const remaining = Math.max(0, duration - (this.time.now - startTime));
+        timerText.setText(`${(remaining / 1000).toFixed(1)}s`);
+        
+        // Parpadeo cuando queda poco tiempo
+        if (remaining < 3000) {
+          timer.alpha = 0.5 + Math.sin(this.time.now * 0.02) * 0.5;
+        }
+        
+        if (remaining <= 0) {
+          updateTimer.destroy();
+          timer.destroy();
+        }
+      },
+      loop: true
+    });
+  }
+  
   deactivatePowerUp(type) {
+    if (!this.activePowerUps[type]) return;
     this.activePowerUps[type].active = false;
+    
+    // Mostrar mensaje de fin
+    const messages = {
+      shield: '🛡️ Escudo desactivado',
+      speedBoost: '⚡ Velocidad normal',
+      damageBoost: '💥 Daño normal',
+      magnet: '🧲 Magnetismo off'
+    };
+    
+    this.showPowerUpEffect(messages[type], 0x888888, true);
     
     switch (type) {
       case 'shield':
         this.player.isInvulnerable = false;
+        if (this.shieldVisual) {
+          this.shieldVisual.destroy();
+          this.shieldVisual = null;
+        }
         break;
       case 'speedBoost':
         this.player.lerpFactor = GAME_CONFIG.PLAYER.LERP_FACTOR;
@@ -580,6 +757,9 @@ export class MainScene extends Phaser.Scene {
         const damageLevel = this.upgradeLevels.BULLET_DAMAGE || 0;
         const baseValue = getUpgradeValue('BULLET_DAMAGE', damageLevel);
         this.player.bulletDamage = baseValue;
+        break;
+      case 'magnet':
+        this.collectiblesAutoMagnetize = false;
         break;
     }
   }
@@ -942,12 +1122,21 @@ export class MainScene extends Phaser.Scene {
     
     // Disparo de enemigos
     this.events.on('enemyFire', (x, y, angle, damage) => {
+      audioManager.playEnemyShoot();
       const bullet = new Bullet(this, x, y, angle, true);
       this.enemyBullets.add(bullet);
     });
     
     // Muerte de enemigos
     this.events.on('enemyDeath', (x, y, points, crystalDrop, type) => {
+      // Sonido de muerte
+      audioManager.playEnemyDeath();
+      
+      // Explosión visual según tipo de enemigo
+      const isBigEnemy = type === 'TANK' || type === 'SHOOTER';
+      const explosionColor = type === 'SWARM' ? 0xffff00 : (type === 'TANK' ? 0xff6600 : GAME_CONFIG.COLORS.RED);
+      this.createExplosion(x, y, isBigEnemy ? 40 : 25, explosionColor, isBigEnemy);
+      
       // Sistema de combos
       this.incrementCombo();
       
@@ -1000,6 +1189,11 @@ export class MainScene extends Phaser.Scene {
     
     // Spawner destruido
     this.events.on('spawnerDestroyed', (x, y, cardElement) => {
+      audioManager.playSpawnerDestroyed();
+      
+      // Explosión grande para spawner
+      this.createExplosion(x, y, 80, GAME_CONFIG.COLORS.MAGENTA, true);
+      
       this.score += 500;
       this.updateHUD();
       
@@ -1181,74 +1375,178 @@ export class MainScene extends Phaser.Scene {
   }
   
   // Explosión mejorada para misiles y muertes
-  createExplosion(x, y, radius = 50, color = 0xff6600) {
-    // Flash principal
+  createExplosion(x, y, radius = 50, color = 0xff6600, isLarge = false) {
+    // Flash principal brillante
     const flash = this.add.graphics();
     flash.setPosition(x, y);
     flash.setDepth(60);
     flash.fillStyle(0xffffff, 1);
-    flash.fillCircle(0, 0, radius * 0.3);
+    flash.fillCircle(0, 0, radius * 0.4);
+    
+    // Glow exterior
+    flash.fillStyle(color, 0.6);
+    flash.fillCircle(0, 0, radius * 0.6);
     
     this.tweens.add({
       targets: flash,
       alpha: 0,
       scale: 3,
-      duration: 100,
+      duration: 120,
       onComplete: () => flash.destroy()
     });
     
-    // Círculos de onda expansiva
-    for (let i = 0; i < 3; i++) {
+    // Círculos de onda expansiva con gradiente
+    const ringCount = isLarge ? 5 : 3;
+    for (let i = 0; i < ringCount; i++) {
       const ring = this.add.graphics();
       ring.setPosition(x, y);
       ring.setDepth(55);
-      ring.lineStyle(4 - i, color, 0.8 - i * 0.2);
+      ring.lineStyle(5 - i, color, 0.9 - i * 0.15);
       ring.strokeCircle(0, 0, radius * 0.2);
       
       this.tweens.add({
         targets: ring,
-        scale: (i + 1) * 1.5,
+        scale: (i + 1) * 1.8,
         alpha: 0,
-        duration: 400 + i * 100,
-        delay: i * 50,
+        duration: 450 + i * 120,
+        delay: i * 40,
+        ease: 'Cubic.easeOut',
         onComplete: () => ring.destroy()
       });
     }
     
-    // Partículas de fuego/escombros
-    const particleCount = 12;
+    // Partículas de fuego/escombros mejoradas
+    const particleCount = isLarge ? 24 : 14;
     for (let i = 0; i < particleCount; i++) {
       const particle = this.add.graphics();
       particle.setPosition(x, y);
       particle.setDepth(58);
       
-      // Colores: naranja, rojo, amarillo
-      const colors = [0xff6600, 0xff0000, 0xffff00, color];
+      // Colores: naranja, rojo, amarillo, blanco
+      const colors = [0xff6600, 0xff0000, 0xffff00, 0xffffff, color];
       const pColor = colors[Math.floor(Math.random() * colors.length)];
       
-      const size = 3 + Math.random() * 5;
+      const size = 2 + Math.random() * 6;
       particle.fillStyle(pColor, 1);
       particle.fillCircle(0, 0, size);
       
-      const angle = (Math.PI * 2 / particleCount) * i + Math.random() * 0.3;
-      const distance = radius * 0.5 + Math.random() * radius * 0.8;
-      const duration = 300 + Math.random() * 300;
+      // Glow en partículas
+      particle.fillStyle(pColor, 0.4);
+      particle.fillCircle(0, 0, size * 1.8);
+      
+      const angle = (Math.PI * 2 / particleCount) * i + (Math.random() - 0.5) * 0.5;
+      const distance = radius * 0.6 + Math.random() * radius;
+      const duration = 350 + Math.random() * 400;
       
       this.tweens.add({
         targets: particle,
         x: x + Math.cos(angle) * distance,
-        y: y + Math.sin(angle) * distance,
+        y: y + Math.sin(angle) * distance + 20, // Ligera caída por gravedad
         alpha: 0,
-        scale: 0.2,
+        scale: 0.1,
         duration: duration,
-        ease: 'Power2',
+        ease: 'Cubic.easeOut',
         onComplete: () => particle.destroy()
       });
     }
     
+    // Chispas pequeñas que salen en todas direcciones
+    const sparkCount = isLarge ? 16 : 8;
+    for (let i = 0; i < sparkCount; i++) {
+      const spark = this.add.graphics();
+      spark.setPosition(x, y);
+      spark.setDepth(59);
+      spark.fillStyle(0xffffff, 1);
+      spark.fillCircle(0, 0, 1.5);
+      
+      const angle = Math.random() * Math.PI * 2;
+      const distance = radius * 1.2 + Math.random() * radius * 0.8;
+      const duration = 200 + Math.random() * 300;
+      
+      this.tweens.add({
+        targets: spark,
+        x: x + Math.cos(angle) * distance,
+        y: y + Math.sin(angle) * distance,
+        alpha: 0,
+        duration: duration,
+        ease: 'Power3',
+        onComplete: () => spark.destroy()
+      });
+    }
+    
+    // Humo residual para explosiones grandes
+    if (isLarge) {
+      for (let i = 0; i < 4; i++) {
+        const smoke = this.add.graphics();
+        smoke.setPosition(x + (Math.random() - 0.5) * radius * 0.5, y + (Math.random() - 0.5) * radius * 0.5);
+        smoke.setDepth(50);
+        smoke.fillStyle(0x444444, 0.4);
+        smoke.fillCircle(0, 0, radius * 0.3);
+        
+        this.tweens.add({
+          targets: smoke,
+          y: smoke.y - 40 - Math.random() * 30,
+          alpha: 0,
+          scale: 2,
+          duration: 800 + Math.random() * 400,
+          delay: 100 + i * 50,
+          ease: 'Cubic.easeOut',
+          onComplete: () => smoke.destroy()
+        });
+      }
+    }
+    
     // Screen shake proporcional al tamaño
-    const shakeIntensity = Math.min(radius / 200, 0.02);
-    this.cameras.main.shake(150, shakeIntensity);
+    const shakeIntensity = isLarge ? 0.025 : Math.min(radius / 200, 0.015);
+    const shakeDuration = isLarge ? 250 : 150;
+    this.cameras.main.shake(shakeDuration, shakeIntensity);
+  }
+  
+  // Efecto de daño flotante
+  createDamageNumber(x, y, damage, isCritical = false) {
+    const color = isCritical ? '#ffff00' : '#ff6666';
+    const size = isCritical ? '20px' : '16px';
+    const prefix = isCritical ? '💥 ' : '';
+    
+    const text = this.add.text(x, y - 10, `${prefix}${Math.round(damage)}`, {
+      fontFamily: '"JetBrains Mono", monospace',
+      fontSize: size,
+      fontStyle: 'bold',
+      color: color,
+      stroke: '#000000',
+      strokeThickness: 3
+    });
+    text.setOrigin(0.5);
+    text.setDepth(100);
+    
+    this.tweens.add({
+      targets: text,
+      y: y - 50,
+      alpha: 0,
+      scale: isCritical ? 1.5 : 1.2,
+      duration: 800,
+      ease: 'Cubic.easeOut',
+      onComplete: () => text.destroy()
+    });
+  }
+  
+  // Efecto de trail para balas del jugador
+  createBulletTrail(bullet) {
+    if (!bullet || !bullet.active) return;
+    
+    const trail = this.add.graphics();
+    trail.setPosition(bullet.x, bullet.y);
+    trail.setDepth(5);
+    trail.fillStyle(GAME_CONFIG.COLORS.CYAN_NEON, 0.5);
+    trail.fillCircle(0, 0, 3);
+    
+    this.tweens.add({
+      targets: trail,
+      alpha: 0,
+      scale: 0.3,
+      duration: 150,
+      onComplete: () => trail.destroy()
+    });
   }
   
   checkAllCollisions() {
@@ -1456,12 +1754,14 @@ export class MainScene extends Phaser.Scene {
   
   enemyBulletHitPlayer(player, bullet) {
     bullet.destroy();
+    audioManager.playPlayerHit();
     this.player.takeDamage(GAME_CONFIG.DAMAGE.ENEMY_BULLET);
     this.updateHUD();
   }
   
   enemyHitPlayer(player, enemy) {
     if (!this.player.isInvulnerable) {
+      audioManager.playPlayerHit();
       this.player.takeDamage(GAME_CONFIG.DAMAGE.COLLISION);
       this.updateHUD();
     }
@@ -1470,6 +1770,7 @@ export class MainScene extends Phaser.Scene {
   collectCrystal(player, crystal) {
     const value = crystal.collect();
     if (value > 0) {
+      audioManager.playCrystalCollect();
       this.crystals += value;
       this.updateHUD();
     }
@@ -1478,6 +1779,7 @@ export class MainScene extends Phaser.Scene {
   collectHealth(player, health) {
     const amount = health.collect();
     if (amount > 0) {
+      audioManager.playHealthCollect();
       this.player.heal(amount);
       this.updateHUD();
     }
@@ -1486,7 +1788,7 @@ export class MainScene extends Phaser.Scene {
   createHUD() {
     const style = {
       fontFamily: '"JetBrains Mono", "Fira Code", monospace',
-      fontSize: '16px',
+      fontSize: '14px',
       color: '#00ffff',
       stroke: '#003333',
       strokeThickness: 2
@@ -1497,27 +1799,84 @@ export class MainScene extends Phaser.Scene {
     this.hudContainer.setDepth(100);
     this.hudContainer.setScrollFactor(0);
     
-    // Fondo del HUD (más alto para incluir el daño)
+    // Fondo del HUD con diseño mejorado
     this.hudBg = this.add.graphics();
-    this.hudBg.fillStyle(0x000000, 0.7);
-    this.hudBg.fillRect(10, 10, 200, 120);
-    this.hudBg.lineStyle(2, GAME_CONFIG.COLORS.CYAN_NEON, 0.5);
-    this.hudBg.strokeRect(10, 10, 200, 120);
+    this.hudBg.fillStyle(0x000000, 0.85);
+    this.hudBg.fillRoundedRect(10, 10, 220, 140, 8);
     
-    // HP Bar
+    // Borde con gradiente simulado
+    this.hudBg.lineStyle(1, GAME_CONFIG.COLORS.CYAN_NEON, 0.3);
+    this.hudBg.strokeRoundedRect(10, 10, 220, 140, 8);
+    this.hudBg.lineStyle(2, GAME_CONFIG.COLORS.CYAN_NEON, 0.7);
+    this.hudBg.strokeRoundedRect(11, 11, 218, 138, 7);
+    
+    // Línea decorativa superior
+    this.hudBg.fillStyle(GAME_CONFIG.COLORS.CYAN_NEON, 0.8);
+    this.hudBg.fillRect(20, 10, 50, 2);
+    
+    // HP Bar mejorada con efecto de energía
     this.hpBarBg = this.add.graphics();
-    this.hpBarBg.fillStyle(0x333333, 1);
-    this.hpBarBg.fillRect(20, 25, 180, 20);
+    this.hpBarBg.fillStyle(0x1a1a2e, 1);
+    this.hpBarBg.fillRoundedRect(20, 28, 200, 24, 4);
+    this.hpBarBg.lineStyle(1, 0x333355, 1);
+    this.hpBarBg.strokeRoundedRect(20, 28, 200, 24, 4);
     
     this.hpBar = this.add.graphics();
     
-    // Textos
-    this.hpText = this.add.text(20, 50, 'HP: 100/100', style);
-    this.scoreText = this.add.text(20, 70, 'SCORE: 0', style);
-    this.damageText = this.add.text(20, 90, 'DMG: 10', style);
-    this.crystalText = this.add.text(120, 50, '💎 0', { ...style, fontSize: '14px' });
+    // Icono de corazón animado
+    this.hpIcon = this.add.text(24, 30, '❤️', { fontSize: '16px' });
     
-    this.hudContainer.add([this.hudBg, this.hpBarBg, this.hpBar, this.hpText, this.scoreText, this.damageText, this.crystalText]);
+    // HP Text sobre la barra
+    this.hpText = this.add.text(120, 40, '100 / 100', {
+      ...style,
+      fontSize: '12px',
+      color: '#ffffff'
+    });
+    this.hpText.setOrigin(0.5);
+    
+    // Fila de stats
+    const statsY = 60;
+    
+    // Score con icono
+    this.scoreIcon = this.add.text(20, statsY, '⭐', { fontSize: '14px' });
+    this.scoreText = this.add.text(40, statsY + 2, '0', { ...style, color: '#ffff00' });
+    
+    // Cristales
+    this.crystalIcon = this.add.text(120, statsY, '💎', { fontSize: '14px' });
+    this.crystalText = this.add.text(140, statsY + 2, '0', { ...style, color: '#00ffff' });
+    
+    // Segunda fila de stats
+    const stats2Y = 85;
+    
+    // Daño con icono
+    this.damageIcon = this.add.text(20, stats2Y, '⚔️', { fontSize: '14px' });
+    this.damageText = this.add.text(40, stats2Y + 2, 'DMG: 10', { ...style, color: '#ff6666', fontSize: '12px' });
+    
+    // Misiles con icono
+    this.missileIcon = this.add.text(120, stats2Y, '🚀', { fontSize: '14px' });
+    this.missileText = this.add.text(140, stats2Y + 2, '0', { ...style, color: '#ff00ff', fontSize: '12px' });
+    
+    // Tercera fila - Combo
+    const stats3Y = 110;
+    this.comboContainer = this.add.container(20, stats3Y);
+    
+    this.comboBg = this.add.graphics();
+    this.comboBg.fillStyle(0x332200, 0.8);
+    this.comboBg.fillRoundedRect(0, 0, 200, 26, 4);
+    
+    this.comboIcon = this.add.text(5, 5, '🔥', { fontSize: '14px' });
+    this.comboText = this.add.text(28, 7, 'COMBO: x1.0', { ...style, color: '#ff8800', fontSize: '12px' });
+    
+    this.comboBar = this.add.graphics();
+    
+    this.comboContainer.add([this.comboBg, this.comboIcon, this.comboText, this.comboBar]);
+    
+    this.hudContainer.add([
+      this.hudBg, this.hpBarBg, this.hpBar, this.hpIcon, this.hpText,
+      this.scoreIcon, this.scoreText, this.crystalIcon, this.crystalText,
+      this.damageIcon, this.damageText, this.missileIcon, this.missileText,
+      this.comboContainer
+    ]);
     
     // HUD de oleada (arriba centro)
     this.waveHUD = this.add.container(this.scale.width / 2, 0);
@@ -1628,22 +1987,97 @@ export class MainScene extends Phaser.Scene {
   }
   
   updateHUD() {
-    // Actualizar barra de HP
+    // Verificar que los elementos del HUD existan
+    if (!this.hpBar || !this.player) return;
+    
+    // Actualizar barra de HP con efecto de energía
     this.hpBar.clear();
     const hpPercent = this.player.hp / this.player.maxHp;
-    const hpColor = hpPercent > 0.5 ? 0x00ff00 : hpPercent > 0.25 ? 0xffff00 : 0xff0000;
     
+    // Color dinámico basado en HP
+    let hpColor, glowColor;
+    if (hpPercent > 0.6) {
+      hpColor = 0x00ff88;
+      glowColor = 0x00ff88;
+    } else if (hpPercent > 0.3) {
+      hpColor = 0xffcc00;
+      glowColor = 0xff8800;
+    } else {
+      hpColor = 0xff3333;
+      glowColor = 0xff0000;
+    }
+    
+    // Barra de HP con gradiente simulado
+    const barWidth = 196 * hpPercent;
+    this.hpBar.fillStyle(hpColor, 0.3);
+    this.hpBar.fillRoundedRect(22, 30, barWidth, 20, 3);
+    this.hpBar.fillStyle(hpColor, 0.7);
+    this.hpBar.fillRoundedRect(22, 30, barWidth, 14, 3);
     this.hpBar.fillStyle(hpColor, 1);
-    this.hpBar.fillRect(20, 25, 180 * hpPercent, 20);
+    this.hpBar.fillRoundedRect(22, 32, barWidth, 8, 2);
     
-    // Actualizar textos
-    this.hpText.setText(`HP: ${this.player.hp}/${this.player.maxHp}`);
-    this.scoreText.setText(`SCORE: ${this.score}`);
-    this.crystalText.setText(`💎 ${this.crystals}`);
+    // Efecto pulsante cuando HP bajo
+    if (hpPercent <= 0.25) {
+      const pulse = 0.6 + Math.sin(Date.now() * 0.01) * 0.4;
+      this.hpBar.alpha = pulse;
+    } else {
+      this.hpBar.alpha = 1;
+    }
+    
+    // Actualizar textos (con verificaciones de seguridad)
+    if (this.hpText && this.hpText.active) {
+      this.hpText.setText(`${this.player.hp} / ${this.player.maxHp}`);
+    }
+    if (this.scoreText && this.scoreText.active) {
+      this.scoreText.setText(`${this.score.toLocaleString()}`);
+    }
+    if (this.crystalText && this.crystalText.active) {
+      this.crystalText.setText(`${this.crystals}`);
+    }
     
     // Mostrar daño actual de las balas
-    if (this.damageText) {
+    if (this.damageText && this.damageText.active) {
       this.damageText.setText(`DMG: ${this.player.bulletDamage}`);
+    }
+    
+    // Mostrar misiles disponibles
+    if (this.missileText && this.missileText.active && this.player) {
+      this.missileText.setText(`${this.player.missileCount}/${this.player.maxMissiles}`);
+    }
+    
+    // Actualizar barra de combo
+    if (this.comboBar && this.comboText && this.comboText.active) {
+      this.comboBar.clear();
+      const comboProgress = (this.comboMultiplier - 1) / 4; // Max x5.0
+      const comboWidth = Math.min(comboProgress, 1) * 170;
+      
+      if (comboWidth > 0) {
+        this.comboBar.fillStyle(0xff6600, 0.5);
+        this.comboBar.fillRoundedRect(28, 18, comboWidth, 6, 2);
+        this.comboBar.fillStyle(0xff8800, 1);
+        this.comboBar.fillRoundedRect(28, 18, comboWidth, 4, 2);
+      }
+      
+      try {
+        // Determinar color basado en nivel
+        let comboColor = '#ff8800';
+        if (this.comboMultiplier >= 4) {
+          comboColor = '#ff0000';
+        } else if (this.comboMultiplier >= 2.5) {
+          comboColor = '#ff6600';
+        } else if (this.comboMultiplier >= 1.5) {
+          comboColor = '#ffaa00';
+        }
+        
+        // Actualizar texto y color de forma segura
+        this.comboText.setStyle({
+          color: comboColor
+        });
+        this.comboText.setText(`COMBO: x${this.comboMultiplier.toFixed(1)}`);
+      } catch (e) {
+        // Si hay un error al actualizar el texto, simplemente no hacer nada
+        console.warn('Error actualizando combo text:', e);
+      }
     }
   }
   
@@ -1730,39 +2164,75 @@ export class MainScene extends Phaser.Scene {
     return [
       {
         title: '🎮 ¡Bienvenido, Piloto!',
-        message: 'Tu nave seguirá el cursor del mouse.\n¡Muévete para esquivar enemigos!',
+        message: 'Tu nave sigue el cursor del mouse.\n¡Prueba a moverte por la pantalla!',
         highlight: 'player',
-        duration: 4000
+        duration: 4000,
+        icon: '🚀',
+        action: 'move',
+        tip: 'TIP: Mantén distancia de los bordes'
       },
       {
         title: '🔫 Disparo Automático',
-        message: 'Tu nave dispara automáticamente.\nApunta con el cursor hacia los enemigos.',
+        message: 'Tu nave dispara sola hacia los enemigos.\nApunta moviendo el cursor.',
         highlight: 'bullets',
-        duration: 3500
+        duration: 3500,
+        icon: '⚡',
+        action: 'aim',
+        tip: 'TIP: El disparo sigue tu dirección de movimiento'
       },
       {
         title: '🚀 Misil Especial',
-        message: 'Haz CLICK para lanzar un misil poderoso.\n¡Causa daño en área!',
+        message: 'CLICK izquierdo = Misil poderoso.\n¡Perfecto contra spawners!',
         highlight: 'missile',
-        duration: 3500
+        duration: 4000,
+        icon: '💥',
+        action: 'click',
+        tip: 'TIP: Los misiles causan daño en área'
       },
       {
-        title: '💎 Cristales',
-        message: 'Recoge cristales de enemigos derrotados.\n¡Úsalos para comprar mejoras!',
+        title: '💎 Cristales y Mejoras',
+        message: 'Los enemigos sueltan cristales.\n¡Compra mejoras en el panel inferior!',
         highlight: 'crystals',
-        duration: 3500
+        duration: 3500,
+        icon: '💎',
+        action: 'collect',
+        tip: 'TIP: Mejora primero el daño o la velocidad'
       },
       {
-        title: '🎯 Objetivo',
-        message: 'Destruye los generadores (hexágonos)\npara completar cada oleada.',
+        title: '⭐ Power-Ups',
+        message: 'Recoge power-ups para bonificaciones:\n🛡️ Escudo  ⚡ Velocidad  💥 Daño  🧲 Imán',
+        highlight: null,
+        duration: 4000,
+        icon: '⭐',
+        action: null,
+        tip: 'TIP: Los power-ups duran 10 segundos'
+      },
+      {
+        title: '🎯 Tu Objetivo',
+        message: 'Destruye los HEXÁGONOS generadores\npara avanzar a la siguiente oleada.',
         highlight: 'spawner',
-        duration: 3500
+        duration: 3500,
+        icon: '🎯',
+        action: 'destroy',
+        tip: 'TIP: Ignora enemigos y ve directo al spawner'
+      },
+      {
+        title: '👑 El Jefe Final',
+        message: 'Tras conquistar todas las secciones,\n¡enfrentarás al Guardián del Código!',
+        highlight: null,
+        duration: 3000,
+        icon: '👑',
+        action: null,
+        tip: 'TIP: El jefe tiene múltiples fases'
       },
       {
         title: '✨ ¡Buena Suerte!',
-        message: 'Conquista cada sección del portfolio.\n¡Derrota al jefe final para ganar!',
+        message: 'Conquista el portfolio completo.\n¡Las estrellas desbloquearán recompensas!',
         highlight: null,
-        duration: 3000
+        duration: 3000,
+        icon: '🌟',
+        action: null,
+        tip: null
       }
     ];
   }
@@ -1781,80 +2251,154 @@ export class MainScene extends Phaser.Scene {
     // Limpiar UI anterior
     this.tutorialUI.removeAll(true);
     
-    // Fondo semi-transparente
+    // Fondo semi-transparente con vignette
     const bg = this.add.graphics();
-    bg.fillStyle(0x000000, 0.6);
+    bg.fillStyle(0x000000, 0.65);
     bg.fillRect(0, 0, this.scale.width, this.scale.height);
     
-    // Panel del tutorial
-    const panelWidth = 400;
-    const panelHeight = 180;
+    // Panel del tutorial mejorado
+    const panelWidth = 450;
+    const panelHeight = 220;
     const panelX = this.scale.width / 2 - panelWidth / 2;
-    const panelY = this.scale.height - panelHeight - 120;
+    const panelY = this.scale.height - panelHeight - 100;
+    
+    // Glow exterior del panel
+    const panelGlow = this.add.graphics();
+    panelGlow.fillStyle(0x00ffff, 0.1);
+    panelGlow.fillRoundedRect(panelX - 5, panelY - 5, panelWidth + 10, panelHeight + 10, 18);
     
     const panel = this.add.graphics();
-    panel.fillStyle(0x0c0c14, 0.95);
+    panel.fillStyle(0x0c0c14, 0.98);
     panel.fillRoundedRect(panelX, panelY, panelWidth, panelHeight, 15);
-    panel.lineStyle(2, 0x00ffff, 0.8);
+    panel.lineStyle(2, 0x00ffff, 0.9);
     panel.strokeRoundedRect(panelX, panelY, panelWidth, panelHeight, 15);
     
-    // Indicador de progreso
+    // Línea decorativa superior
+    panel.fillStyle(0x00ffff, 0.8);
+    panel.fillRect(panelX + 30, panelY, 60, 2);
+    
+    // Icono grande animado
+    const icon = this.add.text(panelX + 50, panelY + 55, step.icon || '🎮', { fontSize: '40px' });
+    icon.setOrigin(0.5);
+    
+    // Animación del icono
+    this.tweens.add({
+      targets: icon,
+      scale: { from: 0.8, to: 1.1 },
+      duration: 500,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+    
+    // Indicador de progreso mejorado
     const progressBg = this.add.graphics();
-    progressBg.fillStyle(0x333333, 0.5);
-    progressBg.fillRect(panelX + 20, panelY + panelHeight - 30, panelWidth - 40, 6);
+    progressBg.fillStyle(0x222233, 1);
+    progressBg.fillRoundedRect(panelX + 20, panelY + panelHeight - 35, panelWidth - 40, 10, 5);
     
     const progressBar = this.add.graphics();
     const progress = (this.tutorialStep + 1) / steps.length;
+    
+    // Gradiente en la barra de progreso
     progressBar.fillStyle(0x00ffff, 1);
-    progressBar.fillRect(panelX + 20, panelY + panelHeight - 30, (panelWidth - 40) * progress, 6);
+    progressBar.fillRoundedRect(panelX + 22, panelY + panelHeight - 33, (panelWidth - 44) * progress, 6, 3);
+    progressBar.fillStyle(0x00aaaa, 0.5);
+    progressBar.fillRoundedRect(panelX + 22, panelY + panelHeight - 30, (panelWidth - 44) * progress, 3, 2);
     
     // Título
-    const title = this.add.text(this.scale.width / 2, panelY + 30, step.title, {
+    const title = this.add.text(panelX + 100, panelY + 35, step.title, {
       fontFamily: '"Orbitron", sans-serif',
-      fontSize: '22px',
+      fontSize: '20px',
       color: '#00ffff',
       stroke: '#003333',
       strokeThickness: 2
     });
-    title.setOrigin(0.5);
     
-    // Mensaje
-    const message = this.add.text(this.scale.width / 2, panelY + 80, step.message, {
+    // Mensaje principal
+    const message = this.add.text(panelX + 100, panelY + 75, step.message, {
       fontFamily: '"JetBrains Mono", monospace',
-      fontSize: '14px',
+      fontSize: '13px',
       color: '#ffffff',
-      align: 'center',
-      lineSpacing: 6
+      lineSpacing: 8,
+      wordWrap: { width: panelWidth - 130 }
     });
-    message.setOrigin(0.5);
     
-    // Indicador de paso
-    const stepIndicator = this.add.text(this.scale.width / 2, panelY + panelHeight - 50, 
+    // Tip adicional
+    if (step.tip) {
+      const tip = this.add.text(panelX + 100, panelY + 135, step.tip, {
+        fontFamily: '"JetBrains Mono", monospace',
+        fontSize: '11px',
+        color: '#ffcc00',
+        fontStyle: 'italic'
+      });
+      this.tutorialUI.add(tip);
+    }
+    
+    // Indicador de paso con estilo
+    const stepBg = this.add.graphics();
+    stepBg.fillStyle(0x333355, 0.8);
+    stepBg.fillRoundedRect(panelX + panelWidth - 80, panelY + panelHeight - 60, 60, 25, 5);
+    
+    const stepIndicator = this.add.text(panelX + panelWidth - 50, panelY + panelHeight - 48, 
       `${this.tutorialStep + 1}/${steps.length}`, {
       fontFamily: '"JetBrains Mono", monospace',
       fontSize: '12px',
-      color: '#666666'
+      color: '#aaaaaa'
     });
     stepIndicator.setOrigin(0.5);
     
-    // Botón de saltar
-    const skipText = this.add.text(panelX + panelWidth - 20, panelY + 15, 'Saltar ⏭️', {
+    // Botón de saltar mejorado
+    const skipBg = this.add.graphics();
+    skipBg.fillStyle(0x331111, 0.6);
+    skipBg.fillRoundedRect(panelX + panelWidth - 90, panelY + 10, 80, 25, 5);
+    
+    const skipText = this.add.text(panelX + panelWidth - 50, panelY + 22, 'Saltar ⏭️', {
+      fontFamily: '"JetBrains Mono", monospace',
+      fontSize: '11px',
+      color: '#ff6666'
+    });
+    skipText.setOrigin(0.5);
+    skipBg.setInteractive(new Phaser.Geom.Rectangle(panelX + panelWidth - 90, panelY + 10, 80, 25), Phaser.Geom.Rectangle.Contains);
+    skipBg.on('pointerover', () => {
+      skipText.setColor('#ffffff');
+      skipBg.clear();
+      skipBg.fillStyle(0x661111, 0.8);
+      skipBg.fillRoundedRect(panelX + panelWidth - 90, panelY + 10, 80, 25, 5);
+    });
+    skipBg.on('pointerout', () => {
+      skipText.setColor('#ff6666');
+      skipBg.clear();
+      skipBg.fillStyle(0x331111, 0.6);
+      skipBg.fillRoundedRect(panelX + panelWidth - 90, panelY + 10, 80, 25, 5);
+    });
+    skipBg.on('pointerdown', () => this.completeTutorial());
+    
+    // Texto de continuar
+    const continueText = this.add.text(this.scale.width / 2, panelY + panelHeight + 20, 
+      '⏳ Continúa automáticamente...', {
       fontFamily: '"JetBrains Mono", monospace',
       fontSize: '12px',
       color: '#666666'
     });
-    skipText.setOrigin(1, 0);
-    skipText.setInteractive({ useHandCursor: true });
-    skipText.on('pointerover', () => skipText.setColor('#ffffff'));
-    skipText.on('pointerout', () => skipText.setColor('#666666'));
-    skipText.on('pointerdown', () => this.completeTutorial());
+    continueText.setOrigin(0.5);
+    
+    // Animación de puntos suspensivos
+    let dots = 0;
+    const dotsInterval = this.time.addEvent({
+      delay: 400,
+      callback: () => {
+        dots = (dots + 1) % 4;
+        continueText.setText(`⏳ Continúa automáticamente${'...'.substring(0, dots + 1)}`);
+      },
+      loop: true
+    });
     
     // Añadir highlight visual si corresponde
     if (step.highlight) {
       this.createTutorialHighlight(step.highlight);
     }
     
-    this.tutorialUI.add([bg, panel, progressBg, progressBar, title, message, stepIndicator, skipText]);
+    this.tutorialUI.add([bg, panelGlow, panel, icon, progressBg, progressBar, title, message, stepBg, stepIndicator, skipBg, skipText, continueText]);
     
     // Animación de entrada
     this.tutorialUI.alpha = 0;
@@ -2079,6 +2623,9 @@ export class MainScene extends Phaser.Scene {
   onBossDefeated() {
     console.log('🏆 ¡JEFE DERROTADO! ¡VICTORIA!');
     
+    // Sonido épico de jefe derrotado
+    audioManager.playBossDefeated();
+    
     this.isBossFight = false;
     this.boss = null;
     
@@ -2162,6 +2709,11 @@ export class MainScene extends Phaser.Scene {
     if (this.scene.isPaused()) {
       this.scene.resume();
     }
+    
+    // Inicializar y reproducir audio
+    audioManager.init();
+    audioManager.playGameStart();
+    audioManager.startMusic();
     
     this.gameState = GAME_CONFIG.STATES.PLAYING;
     this.currentSection = 0;
@@ -2644,6 +3196,7 @@ export class MainScene extends Phaser.Scene {
     }
     
     // Comprar mejora
+    audioManager.playUpgrade();
     this.crystals -= cost;
     this.upgradeLevels[upgradeKey]++;
     
@@ -2854,6 +3407,10 @@ export class MainScene extends Phaser.Scene {
   
   victory() {
     this.gameState = GAME_CONFIG.STATES.GAME_OVER;
+    
+    // Sonido de victoria y parar música
+    audioManager.stopMusic();
+    audioManager.playVictory();
     
     // Rastrear tiempo de partida
     this.gameEndTime = this.time.now;
@@ -3146,47 +3703,93 @@ export class MainScene extends Phaser.Scene {
     });
     message.setOrigin(0.5);
     
+    // Contenedor de botones
+    const buttonsY = timelineY + 125;
+    
+    // Botón para compartir
+    const shareBtn = this.add.graphics();
+    shareBtn.fillStyle(0x333366, 1);
+    shareBtn.fillRoundedRect(-250, buttonsY, 150, 45, 8);
+    shareBtn.lineStyle(2, 0x6366f1, 1);
+    shareBtn.strokeRoundedRect(-250, buttonsY, 150, 45, 8);
+    
+    const shareText = this.add.text(-175, buttonsY + 22, '📤 COMPARTIR', {
+      fontFamily: '"JetBrains Mono", monospace',
+      fontSize: '14px',
+      color: '#6366f1'
+    });
+    shareText.setOrigin(0.5);
+    
+    const shareHitArea = this.add.rectangle(-175, buttonsY + 22, 150, 45, 0x000000, 0);
+    shareHitArea.setInteractive({ useHandCursor: true });
+    
+    shareHitArea.on('pointerover', () => {
+      shareBtn.clear();
+      shareBtn.fillStyle(0x444488, 1);
+      shareBtn.fillRoundedRect(-250, buttonsY, 150, 45, 8);
+      shareBtn.lineStyle(2, 0x8b8cf8, 1);
+      shareBtn.strokeRoundedRect(-250, buttonsY, 150, 45, 8);
+    });
+    
+    shareHitArea.on('pointerout', () => {
+      shareBtn.clear();
+      shareBtn.fillStyle(0x333366, 1);
+      shareBtn.fillRoundedRect(-250, buttonsY, 150, 45, 8);
+      shareBtn.lineStyle(2, 0x6366f1, 1);
+      shareBtn.strokeRoundedRect(-250, buttonsY, 150, 45, 8);
+    });
+    
+    shareHitArea.on('pointerdown', () => {
+      const shareData = {
+        title: '¡Victoria en Portfolio Game!',
+        text: `🏆 ¡Conquisté el portfolio interactivo!\n⭐ Puntos: ${this.score.toLocaleString()}\n⏱️ Tiempo: ${timeString}\n💀 Enemigos: ${this.enemiesKilled}\n\n¡Prueba a superar mi puntuación!`,
+        url: window.location.href
+      };
+      
+      if (navigator.share) {
+        navigator.share(shareData);
+      } else {
+        navigator.clipboard.writeText(shareData.text + '\n' + shareData.url);
+        this.showPowerUpEffect('📋 ¡Copiado al portapapeles!', 0x6366f1);
+      }
+    });
+    
     // Botón para volver al portfolio
     const backBtn = this.add.graphics();
     backBtn.fillStyle(0x003300, 1);
-    backBtn.fillRoundedRect(-120, timelineY + 115, 240, 50, 10);
+    backBtn.fillRoundedRect(-75, buttonsY, 150, 45, 8);
     backBtn.lineStyle(2, 0x00ff00, 1);
-    backBtn.strokeRoundedRect(-120, timelineY + 115, 240, 50, 10);
+    backBtn.strokeRoundedRect(-75, buttonsY, 150, 45, 8);
     
-    const backText = this.add.text(0, timelineY + 140, '👋 VOLVER A SOBRE MÍ', {
-      fontFamily: '"Orbitron", sans-serif',
-      fontSize: '18px',
+    const backText = this.add.text(0, buttonsY + 22, '👋 VOLVER', {
+      fontFamily: '"JetBrains Mono", monospace',
+      fontSize: '14px',
       color: '#00ff00'
     });
     backText.setOrigin(0.5);
     
-    // Hacer el área del botón interactiva
-    const hitArea = this.add.rectangle(0, timelineY + 140, 240, 50, 0x000000, 0);
-    hitArea.setInteractive({ useHandCursor: true });
+    const backHitArea = this.add.rectangle(0, buttonsY + 22, 150, 45, 0x000000, 0);
+    backHitArea.setInteractive({ useHandCursor: true });
     
-    hitArea.on('pointerover', () => {
+    backHitArea.on('pointerover', () => {
       backBtn.clear();
       backBtn.fillStyle(0x005500, 1);
-      backBtn.fillRoundedRect(-120, timelineY + 115, 240, 50, 10);
-      backBtn.lineStyle(3, 0x00ff00, 1);
-      backBtn.strokeRoundedRect(-120, timelineY + 115, 240, 50, 10);
-      backText.setScale(1.05);
+      backBtn.fillRoundedRect(-75, buttonsY, 150, 45, 8);
+      backBtn.lineStyle(2, 0x00ff88, 1);
+      backBtn.strokeRoundedRect(-75, buttonsY, 150, 45, 8);
     });
     
-    hitArea.on('pointerout', () => {
+    backHitArea.on('pointerout', () => {
       backBtn.clear();
       backBtn.fillStyle(0x003300, 1);
-      backBtn.fillRoundedRect(-120, timelineY + 115, 240, 50, 10);
+      backBtn.fillRoundedRect(-75, buttonsY, 150, 45, 8);
       backBtn.lineStyle(2, 0x00ff00, 1);
-      backBtn.strokeRoundedRect(-120, timelineY + 115, 240, 50, 10);
-      backText.setScale(1);
+      backBtn.strokeRoundedRect(-75, buttonsY, 150, 45, 8);
     });
     
-    hitArea.on('pointerdown', () => {
-      // Mostrar pantalla de carga INMEDIATAMENTE antes de recargar
+    backHitArea.on('pointerdown', () => {
       const loadingScreen = document.getElementById('loading-screen');
       if (loadingScreen) {
-        // Forzar visibilidad inmediata con estilos inline para evitar cualquier frame visible
         loadingScreen.style.cssText = `
           position: fixed !important;
           inset: 0 !important;
@@ -3201,20 +3804,61 @@ export class MainScene extends Phaser.Scene {
         loadingScreen.classList.add('visible');
       }
       
-      // Ocultar el body inmediatamente para evitar ver contenido
       if (document.body) {
         document.body.style.opacity = '0';
-        document.body.style.overflowX = 'hidden';
-        document.body.style.overflowY = 'hidden';
       }
       
-      // Recargar la página en el siguiente frame (sin delay visible)
       requestAnimationFrame(() => {
         window.location.reload();
       });
     });
     
-    this.victoryUI.add([bg, statsPanel, victoryText, mainStats, enemiesTitle, enemyContainer, upgradesTitle, upgradeContainer, timelineTitle, timelineContainer, message, backBtn, backText, hitArea]);
+    // Botón para jugar de nuevo
+    const replayBtn = this.add.graphics();
+    replayBtn.fillStyle(0x663300, 1);
+    replayBtn.fillRoundedRect(100, buttonsY, 150, 45, 8);
+    replayBtn.lineStyle(2, 0xff8800, 1);
+    replayBtn.strokeRoundedRect(100, buttonsY, 150, 45, 8);
+    
+    const replayText = this.add.text(175, buttonsY + 22, '🔄 REINICIAR', {
+      fontFamily: '"JetBrains Mono", monospace',
+      fontSize: '14px',
+      color: '#ff8800'
+    });
+    replayText.setOrigin(0.5);
+    
+    const replayHitArea = this.add.rectangle(175, buttonsY + 22, 150, 45, 0x000000, 0);
+    replayHitArea.setInteractive({ useHandCursor: true });
+    
+    replayHitArea.on('pointerover', () => {
+      replayBtn.clear();
+      replayBtn.fillStyle(0x885500, 1);
+      replayBtn.fillRoundedRect(100, buttonsY, 150, 45, 8);
+      replayBtn.lineStyle(2, 0xffaa00, 1);
+      replayBtn.strokeRoundedRect(100, buttonsY, 150, 45, 8);
+    });
+    
+    replayHitArea.on('pointerout', () => {
+      replayBtn.clear();
+      replayBtn.fillStyle(0x663300, 1);
+      replayBtn.fillRoundedRect(100, buttonsY, 150, 45, 8);
+      replayBtn.lineStyle(2, 0xff8800, 1);
+      replayBtn.strokeRoundedRect(100, buttonsY, 150, 45, 8);
+    });
+    
+    replayHitArea.on('pointerdown', () => {
+      this.victoryUI.destroy();
+      this.restartGame();
+    });
+    
+    this.victoryUI.add([
+      bg, statsPanel, victoryText, mainStats, 
+      enemiesTitle, enemyContainer, upgradesTitle, upgradeContainer, 
+      timelineTitle, timelineContainer, message,
+      shareBtn, shareText, shareHitArea,
+      backBtn, backText, backHitArea,
+      replayBtn, replayText, replayHitArea
+    ]);
     
     // Animación de entrada
     this.victoryUI.alpha = 0;
@@ -3230,6 +3874,10 @@ export class MainScene extends Phaser.Scene {
   
   gameOver() {
     this.gameState = GAME_CONFIG.STATES.GAME_OVER;
+    
+    // Sonido de game over y parar música
+    audioManager.stopMusic();
+    audioManager.playGameOver();
     
     // Rastrear tiempo de partida y lugar de muerte
     this.gameEndTime = this.time.now;
@@ -3768,6 +4416,7 @@ export class MainScene extends Phaser.Scene {
         if (this.player.missileCount > 0) {
           const missileData = this.player.fireMissile();
           if (missileData) {
+            audioManager.playMissile();
             const missile = new Missile(
               this,
               missileData.x,
@@ -3826,9 +4475,13 @@ export class MainScene extends Phaser.Scene {
     // Actualizar jugador
     this.player.update(time, delta);
     
+    // Actualizar visual del escudo
+    this.updateShieldVisual();
+    
     // Disparo automático
     const bulletData = this.player.fire();
     if (bulletData) {
+      audioManager.playShoot();
       // Puede ser un objeto o un array (disparo doble)
       if (Array.isArray(bulletData)) {
         bulletData.forEach(data => {
