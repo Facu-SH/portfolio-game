@@ -1051,6 +1051,11 @@ export class MainScene extends Phaser.Scene {
   }
   
   startGame() {
+    // Asegurar que la escena esté activa y no pausada
+    if (this.scene.isPaused()) {
+      this.scene.resume();
+    }
+    
     this.gameState = GAME_CONFIG.STATES.PLAYING;
     this.currentSection = 0;
     this.currentScreenInSection = 0;
@@ -2042,29 +2047,16 @@ export class MainScene extends Phaser.Scene {
     });
     
     hitArea.on('pointerdown', () => {
-      // Navegar a "Sobre mí" y ocultar el juego
-      const aboutLink = document.querySelector('.nav-link[data-page="about"]');
-      if (aboutLink) {
-        aboutLink.click();
+      // Mostrar pantalla de carga antes de recargar
+      const loadingScreen = document.getElementById('loading-screen');
+      if (loadingScreen) {
+        loadingScreen.classList.add('visible');
       }
       
-      // Ocultar el juego y volver al portfolio
-      if (window.game) {
-        window.game.disable();
-        document.body.classList.remove('game-mode');
-      }
-      
-      // Mostrar botón de inicio
-      const startBtn = document.getElementById('start-game-btn');
-      if (startBtn) {
-        startBtn.classList.remove('hidden');
-      }
-      
-      // Ocultar UI de victoria
-      if (this.victoryUI) {
-        this.victoryUI.destroy();
-        this.victoryUI = null;
-      }
+      // Recargar la página después de un pequeño delay para mostrar la pantalla de carga
+      setTimeout(() => {
+        window.location.reload();
+      }, 300);
     });
     
     this.victoryUI.add([bg, statsPanel, victoryText, mainStats, enemiesTitle, enemyContainer, upgradesTitle, upgradeContainer, timelineTitle, timelineContainer, message, backBtn, backText, hitArea]);
@@ -2444,29 +2436,16 @@ export class MainScene extends Phaser.Scene {
     });
     
     hitArea.on('pointerdown', () => {
-      // Navegar a "Sobre mí" y ocultar el juego
-      const aboutLink = document.querySelector('.nav-link[data-page="about"]');
-      if (aboutLink) {
-        aboutLink.click();
+      // Mostrar pantalla de carga antes de recargar
+      const loadingScreen = document.getElementById('loading-screen');
+      if (loadingScreen) {
+        loadingScreen.classList.add('visible');
       }
       
-      // Ocultar el juego y volver al portfolio
-      if (window.game) {
-        window.game.disable();
-        document.body.classList.remove('game-mode');
-      }
-      
-      // Mostrar botón de inicio
-      const startBtn = document.getElementById('start-game-btn');
-      if (startBtn) {
-        startBtn.classList.remove('hidden');
-      }
-      
-      // Ocultar UI de game over
-      if (this.gameOverUI) {
-        this.gameOverUI.destroy();
-        this.gameOverUI = null;
-      }
+      // Recargar la página después de un pequeño delay para mostrar la pantalla de carga
+      setTimeout(() => {
+        window.location.reload();
+      }, 300);
     });
     
     this.gameOverUI.add([bg, statsPanel, gameOverText, mainStats, enemiesTitle, enemyContainer, upgradesTitle, upgradeContainer, timelineTitle, timelineContainer, deathInfoText, backBtn, backText, hitArea]);

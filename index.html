@@ -7,12 +7,82 @@
   <title>Portfolio | Dev Back-end & Videojuegos</title>
   <meta name="description" content="Portfolio interactivo de desarrollador back-end y videojuegos con minijuego espacial integrado">
   
+  <!-- Estilos críticos para pantalla de carga (inline para evitar FOUC) -->
+  <style>
+    /* Ocultar todo hasta que se cargue */
+    body {
+      opacity: 0;
+      overflow: hidden;
+    }
+    
+    /* Pantalla de carga visible desde el inicio */
+    #loading-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      background: #0c0c14;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 1;
+      visibility: visible;
+    }
+    
+    .loading-content {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+    }
+    
+    .loading-spinner {
+      width: 60px;
+      height: 60px;
+      border: 4px solid rgba(99, 102, 241, 0.2);
+      border-top-color: #6366f1;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+    
+    .loading-text {
+      font-family: 'Syne', system-ui, sans-serif;
+      font-size: 18px;
+      color: #94a3b8;
+      letter-spacing: 2px;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 0.6;
+      }
+      50% {
+        opacity: 1;
+      }
+    }
+  </style>
+  
   <!-- Fuentes -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   </head>
   <body>
+  <!-- Pantalla de carga -->
+  <div id="loading-screen" class="loading-screen">
+    <div class="loading-content">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">Cargando Portfolio...</div>
+    </div>
+  </div>
+
   <!-- Contenedor del juego (overlay) -->
   <div id="game-container"></div>
   

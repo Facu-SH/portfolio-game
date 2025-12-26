@@ -4,9 +4,42 @@ import { Game } from './game/Game.js';
 // Inicializar el juego
 const game = new Game('game-container');
 
+// Ocultar pantalla de carga cuando todo esté listo
+function hideLoadingScreen() {
+  const loadingScreen = document.getElementById('loading-screen');
+  const body = document.body;
+  
+  if (loadingScreen && body) {
+    // Pequeño delay para asegurar que todo esté renderizado
+    setTimeout(() => {
+      // Fade out de la pantalla de carga
+      loadingScreen.style.opacity = '0';
+      loadingScreen.style.transition = 'opacity 0.4s ease';
+      
+      // Mostrar el body con fade in
+      body.style.opacity = '1';
+      body.style.transition = 'opacity 0.4s ease';
+      body.style.overflow = '';
+      
+      // Remover del DOM después de la animación
+      setTimeout(() => {
+        if (loadingScreen.parentNode) {
+          loadingScreen.style.display = 'none';
+        }
+      }, 400);
+    }, 500);
+  }
+}
+
 // Esperar a que el DOM esté listo
 document.addEventListener('DOMContentLoaded', () => {
   console.log('📄 DOM cargado, inicializando...');
+  
+  // Mostrar pantalla de carga al inicio
+  const loadingScreen = document.getElementById('loading-screen');
+  if (loadingScreen) {
+    loadingScreen.classList.add('visible');
+  }
   
   // Inicializar el juego
   game.init();
@@ -34,6 +67,9 @@ document.addEventListener('DOMContentLoaded', () => {
   if (isMobile()) {
     showMobileWarning();
   }
+  
+  // Ocultar pantalla de carga cuando todo esté listo
+  hideLoadingScreen();
 });
 
 // ============================================
@@ -237,6 +273,11 @@ function initGameControls() {
       setTimeout(() => {
         const scene = game.game?.scene?.getScene('MainScene');
         if (scene) {
+          // Asegurar que la escena esté activa
+          if (scene.scene.isPaused()) {
+            scene.scene.resume();
+          }
+          
           // Si el juego no está en IDLE, reiniciarlo primero
           if (scene.gameState !== 'IDLE') {
             scene.restartGame();
