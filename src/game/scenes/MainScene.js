@@ -2068,7 +2068,8 @@ export class MainScene extends Phaser.Scene {
       // Ocultar el body inmediatamente para evitar ver contenido
       if (document.body) {
         document.body.style.opacity = '0';
-        document.body.style.overflow = 'hidden';
+        document.body.style.overflowX = 'hidden';
+        document.body.style.overflowY = 'hidden';
       }
       
       // Recargar la página en el siguiente frame (sin delay visible)
@@ -2475,7 +2476,8 @@ export class MainScene extends Phaser.Scene {
       // Ocultar el body inmediatamente para evitar ver contenido
       if (document.body) {
         document.body.style.opacity = '0';
-        document.body.style.overflow = 'hidden';
+        document.body.style.overflowX = 'hidden';
+        document.body.style.overflowY = 'hidden';
       }
       
       // Recargar la página en el siguiente frame (sin delay visible)

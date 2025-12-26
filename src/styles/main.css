@@ -85,22 +85,57 @@ body::before {
   z-index: -1;
 }
 
-/* Scrollbar */
+/* Scrollbar - Oculto por defecto */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 0px;
+  display: none;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--bg-secondary);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: transparent;
+}
+
+/* Ocultar scrollbar en Firefox */
+* {
+  scrollbar-width: none;
+}
+
+/* Mostrar scrollbar solo en páginas que no sean "Sobre mí" */
+#page-experience::-webkit-scrollbar,
+#page-portfolio::-webkit-scrollbar {
+  width: 8px;
+  display: block;
+}
+
+#page-experience::-webkit-scrollbar-track,
+#page-portfolio::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+#page-experience::-webkit-scrollbar-thumb,
+#page-portfolio::-webkit-scrollbar-thumb {
   background: var(--accent-primary);
   border-radius: var(--radius-full);
 }
 
-::-webkit-scrollbar-thumb:hover {
+#page-experience::-webkit-scrollbar-thumb:hover,
+#page-portfolio::-webkit-scrollbar-thumb:hover {
   background: var(--accent-secondary);
+}
+
+/* Mostrar scrollbar en Firefox solo para experiencia y portfolio */
+#page-experience,
+#page-portfolio {
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent-primary) var(--bg-secondary);
 }
 
 /* ============================================
@@ -177,6 +212,7 @@ body::before {
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.3s ease, visibility 0.3s ease;
+  overflow: hidden;
 }
 
 #game-container canvas {
@@ -190,7 +226,16 @@ body::before {
   visibility: visible;
 }
 
-/* Cuando el juego está activo, ocultar el portfolio */
+/* Cuando el juego está activo, ocultar el portfolio y el scrollbar */
+body.game-mode {
+  overflow: hidden;
+}
+
+/* Ocultar scrollbar cuando el juego está activo */
+body.game-mode {
+  overflow: hidden;
+}
+
 body.game-mode #app,
 body.game-mode .main-nav,
 body.game-mode .space-commander-badge,
@@ -529,6 +574,16 @@ body.game-mode .game-toggle {
 /* ============================================
    ABOUT PAGE
    ============================================ */
+
+/* Ocultar scrollbar en la página "Sobre mí" */
+#page-about {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE y Edge */
+}
+
+#page-about::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
 
 .about-hero {
   display: grid;

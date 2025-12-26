@@ -16,10 +16,11 @@ function hideLoadingScreen() {
       loadingScreen.style.opacity = '0';
       loadingScreen.style.transition = 'opacity 0.4s ease';
       
-      // Mostrar el body con fade in
+      // Mostrar el body con fade in y restaurar scroll
       body.style.opacity = '1';
       body.style.transition = 'opacity 0.4s ease';
-      body.style.overflow = '';
+      body.style.overflowX = 'hidden';
+      body.style.overflowY = 'auto';
       
       // Remover del DOM después de la animación
       setTimeout(() => {
