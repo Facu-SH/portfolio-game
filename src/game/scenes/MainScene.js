@@ -106,6 +106,7 @@ export class MainScene extends Phaser.Scene {
     this.tutorialStep = 0;
     this.tutorialCompleted = this.loadTutorialState();
     this.tutorialUI = null;
+    this.tutorialStepTimer = null;
     
     // Sistema de combos
     this.combo = 0;
@@ -2552,8 +2553,11 @@ export class MainScene extends Phaser.Scene {
       duration: 300
     });
     
-    // Avanzar al siguiente paso
-    this.time.delayedCall(step.duration, () => {
+    // Avanzar al siguiente paso (guardar referencia para poder cancelar)
+    if (this.tutorialStepTimer) {
+      this.tutorialStepTimer.destroy();
+    }
+    this.tutorialStepTimer = this.time.delayedCall(step.duration, () => {
       this.tutorialStep++;
       this.showTutorialStep();
     });
@@ -2621,6 +2625,12 @@ export class MainScene extends Phaser.Scene {
     this.tutorialCompleted = true;
     this.saveTutorialState();
     
+    // Cancelar el timer del paso actual
+    if (this.tutorialStepTimer) {
+      this.tutorialStepTimer.destroy();
+      this.tutorialStepTimer = null;
+    }
+    
     // Destruir todos los intervalos del tutorial
     if (this.tutorialIntervals) {
       this.tutorialIntervals.forEach(interval => {
@@ -2645,7 +2655,22 @@ export class MainScene extends Phaser.Scene {
       });
     }
     
+    // Iniciar los spawners inmediatamente después del tutorial
+    this.startSpawners();
+    
     console.log('📖 Tutorial completado');
+  }
+  
+  startSpawners() {
+    // Crear spawners para la primera pantalla
+    this.createSpawnersForScreen();
+    
+    // Iniciar spawners después de un pequeño delay
+    this.time.delayedCall(500, () => {
+      this.spawners.getChildren().forEach(spawner => {
+        spawner.spawnInitialEnemies();
+      });
+    });
   }
   
   skipTutorial() {
@@ -2953,31 +2978,10 @@ export class MainScene extends Phaser.Scene {
     // Mostrar tutorial si es la primera vez
     if (!this.tutorialCompleted) {
       this.createTutorial();
-      
-      // Esperar a que termine el tutorial antes de crear spawners
-      const tutorialDuration = this.getTutorialSteps().reduce((total, step) => total + step.duration, 0);
-      
-      this.time.delayedCall(tutorialDuration + 500, () => {
-        // Crear spawners para la primera pantalla
-        this.createSpawnersForScreen();
-        
-        // Iniciar spawners después de un pequeño delay
-        this.time.delayedCall(500, () => {
-          this.spawners.getChildren().forEach(spawner => {
-            spawner.spawnInitialEnemies();
-          });
-        });
-      });
+      // Los spawners se crearán cuando se complete el tutorial (ver completeTutorial)
     } else {
       // Crear spawners para la primera pantalla
-      this.createSpawnersForScreen();
-      
-      // Iniciar spawners después de un pequeño delay
-      this.time.delayedCall(500, () => {
-        this.spawners.getChildren().forEach(spawner => {
-          spawner.spawnInitialEnemies();
-        });
-      });
+      this.startSpawners();
     }
     
     // Posicionar jugador en el cursor actual
@@ -3142,38 +3146,79 @@ export class MainScene extends Phaser.Scene {
       this.resumeGame();
     });
     
+    // Botón de mute/unmute
+    const muteBtn = this.add.graphics();
+    const isMuted = audioManager.isMuted;
+    
+    const drawMuteBtn = (muted, hover = false) => {
+      muteBtn.clear();
+      muteBtn.fillStyle(hover ? 0x333344 : 0x222233, 1);
+      muteBtn.fillRoundedRect(-140, 110, 280, 50, 10);
+      muteBtn.lineStyle(hover ? 3 : 2, muted ? 0xff6666 : 0x66ff66, 1);
+      muteBtn.strokeRoundedRect(-140, 110, 280, 50, 10);
+    };
+    
+    drawMuteBtn(isMuted);
+    
+    const muteText = this.add.text(0, 135, isMuted ? '🔇 ACTIVAR SONIDO' : '🔊 SILENCIAR', {
+      fontFamily: '"Orbitron", sans-serif',
+      fontSize: '18px',
+      color: isMuted ? '#ff6666' : '#66ff66'
+    });
+    muteText.setOrigin(0.5);
+    
+    const muteHitArea = this.add.rectangle(0, 135, 280, 50, 0x000000, 0);
+    muteHitArea.setInteractive({ useHandCursor: true });
+    
+    muteHitArea.on('pointerover', () => {
+      drawMuteBtn(audioManager.isMuted, true);
+      muteText.setScale(1.05);
+    });
+    
+    muteHitArea.on('pointerout', () => {
+      drawMuteBtn(audioManager.isMuted, false);
+      muteText.setScale(1);
+    });
+    
+    muteHitArea.on('pointerdown', () => {
+      const nowMuted = audioManager.toggleMute();
+      muteText.setText(nowMuted ? '🔇 ACTIVAR SONIDO' : '🔊 SILENCIAR');
+      muteText.setColor(nowMuted ? '#ff6666' : '#66ff66');
+      drawMuteBtn(nowMuted);
+    });
+    
     // Botón de volver a la web
     const exitBtn = this.add.graphics();
     exitBtn.fillStyle(0x330011, 1);
-    exitBtn.fillRoundedRect(-140, 110, 280, 50, 10);
+    exitBtn.fillRoundedRect(-140, 180, 280, 50, 10);
     exitBtn.lineStyle(2, 0xff0066, 1);
-    exitBtn.strokeRoundedRect(-140, 110, 280, 50, 10);
+    exitBtn.strokeRoundedRect(-140, 180, 280, 50, 10);
     
-    const exitText = this.add.text(0, 135, '🌐 VOLVER A LA WEB', {
+    const exitText = this.add.text(0, 205, '🌐 VOLVER A LA WEB', {
       fontFamily: '"Orbitron", sans-serif',
       fontSize: '18px',
       color: '#ff0066'
     });
     exitText.setOrigin(0.5);
     
-    const exitHitArea = this.add.rectangle(0, 135, 280, 50, 0x000000, 0);
+    const exitHitArea = this.add.rectangle(0, 205, 280, 50, 0x000000, 0);
     exitHitArea.setInteractive({ useHandCursor: true });
     
     exitHitArea.on('pointerover', () => {
       exitBtn.clear();
       exitBtn.fillStyle(0x550033, 1);
-      exitBtn.fillRoundedRect(-140, 110, 280, 50, 10);
+      exitBtn.fillRoundedRect(-140, 180, 280, 50, 10);
       exitBtn.lineStyle(3, 0xff0066, 1);
-      exitBtn.strokeRoundedRect(-140, 110, 280, 50, 10);
+      exitBtn.strokeRoundedRect(-140, 180, 280, 50, 10);
       exitText.setScale(1.05);
     });
     
     exitHitArea.on('pointerout', () => {
       exitBtn.clear();
       exitBtn.fillStyle(0x330011, 1);
-      exitBtn.fillRoundedRect(-140, 110, 280, 50, 10);
+      exitBtn.fillRoundedRect(-140, 180, 280, 50, 10);
       exitBtn.lineStyle(2, 0xff0066, 1);
-      exitBtn.strokeRoundedRect(-140, 110, 280, 50, 10);
+      exitBtn.strokeRoundedRect(-140, 180, 280, 50, 10);
       exitText.setScale(1);
     });
     
@@ -3182,7 +3227,7 @@ export class MainScene extends Phaser.Scene {
       window.location.reload();
     });
     
-    this.pauseUI.add([bg, panel, pauseText, statsText, resumeBtn, resumeText, resumeHitArea, exitBtn, exitText, exitHitArea]);
+    this.pauseUI.add([bg, panel, pauseText, statsText, resumeBtn, resumeText, resumeHitArea, muteBtn, muteText, muteHitArea, exitBtn, exitText, exitHitArea]);
     this.pauseUI.setVisible(false);
   }
   

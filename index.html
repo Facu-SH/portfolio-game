@@ -154,10 +154,6 @@
     🚀 Iniciar Juego
   </button>
 
-  <!-- Botón temporal para resetear progreso (solo desarrollo) -->
-  <button id="reset-progress-btn" class="reset-progress-btn" title="Restablecer todo el progreso">
-    🔄 Reset
-  </button>
 
   <!-- Badge de Space Commander (aparece al completar todo) -->
   <div id="space-commander-badge" class="space-commander-badge">
@@ -1155,6 +1151,15 @@
             </div>
           </div>
 
+        </div>
+
+        <!-- Botón para resetear todo el progreso -->
+        <div class="reset-section">
+          <button id="reset-progress-btn" class="reset-progress-btn">
+            <span class="reset-icon">🔄</span>
+            <span class="reset-text">Restablecer Todo el Progreso</span>
+          </button>
+          <p class="reset-warning">Esta acción eliminará todas tus estadísticas, logros y conquistas.</p>
         </div>
       </div>
     </section>
