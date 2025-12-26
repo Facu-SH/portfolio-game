@@ -337,6 +337,119 @@ export class MainScene extends Phaser.Scene {
   }
   
   // ============================================
+  // ESTADÍSTICAS GLOBALES PERSISTENTES
+  // ============================================
+  
+  loadGlobalStats() {
+    try {
+      const saved = localStorage.getItem('portfolio_global_stats');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.warn('Error cargando estadísticas globales');
+    }
+    return this.getDefaultGlobalStats();
+  }
+  
+  getDefaultGlobalStats() {
+    return {
+      totalGamesPlayed: 0,
+      totalScore: 0,
+      totalCrystals: 0,
+      totalEnemiesKilled: 0,
+      totalEnemiesByType: {
+        SCOUT: 0,
+        DRIFTER: 0,
+        TANK: 0,
+        SHOOTER: 0,
+        SWARM: 0
+      },
+      totalBulletsFired: 0,
+      totalBulletsHit: 0,
+      totalMissilesFired: 0,
+      totalMissilesHit: 0,
+      totalPlayTime: 0,
+      totalSpawnersDestroyed: 0,
+      bossesDefeated: 0,
+      gamesCompleted: 0,
+      highestScore: 0,
+      highestCombo: 0,
+      mostCrystalsInGame: 0,
+      fastestCompletion: null,
+      longestGame: 0,
+      totalDamageTaken: 0,
+      totalUpgradesPurchased: 0
+    };
+  }
+  
+  saveGlobalStats(stats) {
+    try {
+      localStorage.setItem('portfolio_global_stats', JSON.stringify(stats));
+    } catch (e) {
+      console.warn('Error guardando estadísticas globales');
+    }
+  }
+  
+  updateGlobalStats() {
+    const stats = this.loadGlobalStats();
+    const gameTime = this.gameEndTime - this.gameStartTime;
+    const wasCompleted = this.sectionsCompleted.length >= this.sections.length - 1; // Excluyendo boss section
+    
+    // Incrementar contadores
+    stats.totalGamesPlayed++;
+    stats.totalScore += this.score;
+    stats.totalCrystals += this.crystals;
+    stats.totalEnemiesKilled += this.enemiesKilled;
+    stats.totalBulletsFired += this.bulletsFired;
+    stats.totalBulletsHit += this.bulletsHit;
+    stats.totalMissilesFired += this.missilesFired;
+    stats.totalMissilesHit += this.missilesHit;
+    stats.totalPlayTime += gameTime;
+    stats.totalUpgradesPurchased += this.upgradesPurchased.length;
+    
+    // Estadísticas por tipo de enemigo
+    Object.keys(this.enemiesKilledByType).forEach(type => {
+      stats.totalEnemiesByType[type] = (stats.totalEnemiesByType[type] || 0) + this.enemiesKilledByType[type];
+    });
+    
+    // Contar spawners destruidos (aproximado por enemiesKilled / 5)
+    const spawnersThisGame = Math.floor(this.enemiesKilled / 8);
+    stats.totalSpawnersDestroyed += spawnersThisGame;
+    
+    // Records
+    if (this.score > stats.highestScore) {
+      stats.highestScore = this.score;
+    }
+    if (this.maxCombo > stats.highestCombo) {
+      stats.highestCombo = this.maxCombo;
+    }
+    if (this.crystals > stats.mostCrystalsInGame) {
+      stats.mostCrystalsInGame = this.crystals;
+    }
+    if (gameTime > stats.longestGame) {
+      stats.longestGame = gameTime;
+    }
+    
+    // Si completó el juego (derrotó al jefe)
+    if (this.achievements.bossSlayer || this.isBossFight && this.boss && !this.boss.active) {
+      stats.bossesDefeated++;
+    }
+    
+    // Si completó todas las secciones
+    if (wasCompleted) {
+      stats.gamesCompleted++;
+      // Actualizar tiempo más rápido si aplica
+      if (stats.fastestCompletion === null || gameTime < stats.fastestCompletion) {
+        stats.fastestCompletion = gameTime;
+      }
+    }
+    
+    this.saveGlobalStats(stats);
+    console.log('📊 Estadísticas globales actualizadas:', stats);
+  }
+  
+  // ============================================
   // SISTEMA DE COMBOS
   // ============================================
   
@@ -3459,6 +3572,9 @@ export class MainScene extends Phaser.Scene {
     // Agregar al leaderboard
     this.addToLeaderboard();
     
+    // Actualizar estadísticas globales
+    this.updateGlobalStats();
+    
     // Marcar todas las secciones como completadas si no están ya
     this.sections.forEach((section, index) => {
       const alreadyCompleted = this.sectionsCompleted.find(s => s.sectionId === section.id);
@@ -3925,6 +4041,10 @@ export class MainScene extends Phaser.Scene {
     
     // Agregar al leaderboard
     this.addToLeaderboard();
+    
+    // Actualizar estadísticas globales
+    this.updateGlobalStats();
+    
     const currentSection = this.sections[this.currentSection];
     if (currentSection) {
       this.deathSection = {

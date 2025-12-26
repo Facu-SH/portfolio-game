@@ -206,6 +206,7 @@
       <li><a href="#" class="nav-link" data-page="experience">Experiencia<span class="conquest-badge">⭐</span></a></li>
       <li><a href="#" class="nav-link" data-page="portfolio">Portfolio<span class="conquest-badge">🏆</span></a></li>
       <li><a href="#" class="nav-link" data-page="contact">Contacto</a></li>
+      <li><a href="#" class="nav-link" data-page="progress">Progreso<span class="progress-badge">📊</span></a></li>
     </ul>
   </nav>
 
@@ -849,6 +850,311 @@
               <div id="form-status" class="form-status" aria-live="polite"></div>
             </form>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== PÁGINA: PROGRESO ==================== -->
+    <section id="page-progress" class="page">
+      <div class="page-content">
+        <header class="page-header">
+          <h1 class="page-title">Centro de Mando</h1>
+          <p class="page-subtitle">Tu progreso y estadísticas de comandante espacial</p>
+        </header>
+
+        <!-- Card de Rango del Comandante -->
+        <div class="progress-rank-card" id="rank-card">
+          <div class="rank-icon-container">
+            <span class="rank-icon" id="rank-icon">🎖️</span>
+            <div class="rank-glow"></div>
+          </div>
+          <div class="rank-info">
+            <span class="rank-label">RANGO ACTUAL</span>
+            <h2 class="rank-name" id="rank-name">Cadete</h2>
+            <div class="rank-progress-container">
+              <div class="rank-progress-bar">
+                <div class="rank-progress-fill" id="rank-progress-fill"></div>
+              </div>
+              <span class="rank-progress-text" id="rank-progress-text">0 / 1,000 pts</span>
+            </div>
+            <span class="rank-next" id="rank-next">Siguiente: Teniente</span>
+          </div>
+          <div class="rank-stats-mini">
+            <div class="rank-stat">
+              <span class="rank-stat-value" id="total-games">0</span>
+              <span class="rank-stat-label">Partidas</span>
+            </div>
+            <div class="rank-stat">
+              <span class="rank-stat-value" id="total-score">0</span>
+              <span class="rank-stat-label">Puntos Totales</span>
+            </div>
+            <div class="rank-stat">
+              <span class="rank-stat-value" id="total-time">0h 0m</span>
+              <span class="rank-stat-label">Tiempo de Vuelo</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Grid de Cards del Dashboard -->
+        <div class="progress-grid">
+          
+          <!-- Card de Logros -->
+          <div class="progress-card achievements-card">
+            <div class="card-header">
+              <span class="card-icon">🏆</span>
+              <h3 class="card-title">Logros</h3>
+              <span class="card-counter" id="achievements-counter">0/10</span>
+            </div>
+            <div class="achievements-grid" id="achievements-grid">
+              <!-- Los logros se generan dinámicamente -->
+              <div class="achievement-item locked" data-achievement="firstBlood">
+                <span class="achievement-icon">⚔️</span>
+                <span class="achievement-name">Primera Sangre</span>
+                <span class="achievement-desc">Elimina tu primer enemigo</span>
+              </div>
+              <div class="achievement-item locked" data-achievement="combo5">
+                <span class="achievement-icon">⚡</span>
+                <span class="achievement-name">Combo x5</span>
+                <span class="achievement-desc">Alcanza un combo de 5</span>
+              </div>
+              <div class="achievement-item locked" data-achievement="combo10">
+                <span class="achievement-icon">🔥</span>
+                <span class="achievement-name">Combo x10</span>
+                <span class="achievement-desc">Alcanza un combo de 10</span>
+              </div>
+              <div class="achievement-item locked" data-achievement="combo20">
+                <span class="achievement-icon">💥</span>
+                <span class="achievement-name">Combo x20</span>
+                <span class="achievement-desc">Alcanza un combo de 20</span>
+              </div>
+              <div class="achievement-item locked" data-achievement="crystalCollector">
+                <span class="achievement-icon">💎</span>
+                <span class="achievement-name">Coleccionista</span>
+                <span class="achievement-desc">Recolecta 100 cristales</span>
+              </div>
+              <div class="achievement-item locked" data-achievement="bossSlayer">
+                <span class="achievement-icon">👑</span>
+                <span class="achievement-name">Cazador de Jefes</span>
+                <span class="achievement-desc">Derrota al jefe final</span>
+              </div>
+              <div class="achievement-item locked" data-achievement="perfectSection">
+                <span class="achievement-icon">🛡️</span>
+                <span class="achievement-name">Perfeccionista</span>
+                <span class="achievement-desc">Completa una sección sin daño</span>
+              </div>
+              <div class="achievement-item locked" data-achievement="speedRunner">
+                <span class="achievement-icon">⏱️</span>
+                <span class="achievement-name">Velocista</span>
+                <span class="achievement-desc">Completa en menos de 5 min</span>
+              </div>
+              <div class="achievement-item locked" data-achievement="upgradeMaster">
+                <span class="achievement-icon">🎯</span>
+                <span class="achievement-name">Maestro</span>
+                <span class="achievement-desc">Compra todas las mejoras</span>
+              </div>
+              <div class="achievement-item locked" data-achievement="survivor">
+                <span class="achievement-icon">💀</span>
+                <span class="achievement-name">Superviviente</span>
+                <span class="achievement-desc">Sobrevive con 1 HP</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card de Estadísticas de Combate -->
+          <div class="progress-card combat-card">
+            <div class="card-header">
+              <span class="card-icon">👾</span>
+              <h3 class="card-title">Combate</h3>
+            </div>
+            <div class="combat-stats">
+              <div class="enemy-kills-grid" id="enemy-kills-grid">
+                <div class="enemy-kill-stat" data-enemy="SCOUT">
+                  <div class="enemy-visual scout-visual"></div>
+                  <span class="enemy-name">Scout</span>
+                  <span class="enemy-count" id="kills-scout">0</span>
+                </div>
+                <div class="enemy-kill-stat" data-enemy="DRIFTER">
+                  <div class="enemy-visual drifter-visual"></div>
+                  <span class="enemy-name">Drifter</span>
+                  <span class="enemy-count" id="kills-drifter">0</span>
+                </div>
+                <div class="enemy-kill-stat" data-enemy="TANK">
+                  <div class="enemy-visual tank-visual"></div>
+                  <span class="enemy-name">Tank</span>
+                  <span class="enemy-count" id="kills-tank">0</span>
+                </div>
+                <div class="enemy-kill-stat" data-enemy="SHOOTER">
+                  <div class="enemy-visual shooter-visual"></div>
+                  <span class="enemy-name">Shooter</span>
+                  <span class="enemy-count" id="kills-shooter">0</span>
+                </div>
+                <div class="enemy-kill-stat" data-enemy="SWARM">
+                  <div class="enemy-visual swarm-visual"></div>
+                  <span class="enemy-name">Swarm</span>
+                  <span class="enemy-count" id="kills-swarm">0</span>
+                </div>
+              </div>
+              <div class="combat-totals">
+                <div class="combat-total-stat">
+                  <span class="stat-value" id="total-enemies">0</span>
+                  <span class="stat-label">Enemigos Totales</span>
+                </div>
+                <div class="combat-total-stat">
+                  <span class="stat-value" id="total-spawners">0</span>
+                  <span class="stat-label">Spawners Destruidos</span>
+                </div>
+                <div class="combat-total-stat">
+                  <span class="stat-value" id="total-bosses">0</span>
+                  <span class="stat-label">Jefes Derrotados</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card de Arsenal y Accuracy -->
+          <div class="progress-card arsenal-card">
+            <div class="card-header">
+              <span class="card-icon">🎯</span>
+              <h3 class="card-title">Arsenal</h3>
+            </div>
+            <div class="arsenal-stats">
+              <div class="accuracy-stat">
+                <div class="accuracy-header">
+                  <span class="accuracy-icon">🔫</span>
+                  <span class="accuracy-label">Precisión de Balas</span>
+                  <span class="accuracy-value" id="bullet-accuracy">0%</span>
+                </div>
+                <div class="accuracy-bar">
+                  <div class="accuracy-fill" id="bullet-accuracy-fill"></div>
+                </div>
+                <div class="accuracy-detail">
+                  <span id="bullets-hit">0</span> impactos / <span id="bullets-fired">0</span> disparos
+                </div>
+              </div>
+              <div class="accuracy-stat">
+                <div class="accuracy-header">
+                  <span class="accuracy-icon">🚀</span>
+                  <span class="accuracy-label">Precisión de Misiles</span>
+                  <span class="accuracy-value" id="missile-accuracy">0%</span>
+                </div>
+                <div class="accuracy-bar missile-bar">
+                  <div class="accuracy-fill missile-fill" id="missile-accuracy-fill"></div>
+                </div>
+                <div class="accuracy-detail">
+                  <span id="missiles-hit">0</span> impactos / <span id="missiles-fired">0</span> disparos
+                </div>
+              </div>
+              <div class="upgrades-purchased-stat">
+                <span class="stat-icon">⚡</span>
+                <span class="stat-value" id="total-upgrades">0</span>
+                <span class="stat-label">Mejoras Compradas</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card de Records Personales -->
+          <div class="progress-card records-card">
+            <div class="card-header">
+              <span class="card-icon">⭐</span>
+              <h3 class="card-title">Records Personales</h3>
+            </div>
+            <div class="records-list">
+              <div class="record-item">
+                <span class="record-icon">🏅</span>
+                <span class="record-label">Mayor Puntuación</span>
+                <span class="record-value" id="record-score">0</span>
+              </div>
+              <div class="record-item">
+                <span class="record-icon">🔥</span>
+                <span class="record-label">Mayor Combo</span>
+                <span class="record-value" id="record-combo">x0</span>
+              </div>
+              <div class="record-item">
+                <span class="record-icon">💎</span>
+                <span class="record-label">Más Cristales</span>
+                <span class="record-value" id="record-crystals">0</span>
+              </div>
+              <div class="record-item">
+                <span class="record-icon">⏱️</span>
+                <span class="record-label">Partida Más Larga</span>
+                <span class="record-value" id="record-longest">0:00</span>
+              </div>
+              <div class="record-item">
+                <span class="record-icon">🚀</span>
+                <span class="record-label">Más Rápido (Completado)</span>
+                <span class="record-value" id="record-fastest">--:--</span>
+              </div>
+              <div class="record-item">
+                <span class="record-icon">✅</span>
+                <span class="record-label">Partidas Completadas</span>
+                <span class="record-value" id="record-completed">0</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card de Mejores Partidas (Leaderboard) -->
+          <div class="progress-card leaderboard-card">
+            <div class="card-header">
+              <span class="card-icon">📊</span>
+              <h3 class="card-title">Mejores Partidas</h3>
+            </div>
+            <div class="leaderboard-list" id="leaderboard-list">
+              <!-- Se genera dinámicamente -->
+              <div class="leaderboard-empty">
+                <span class="empty-icon">🎮</span>
+                <span class="empty-text">Aún no hay partidas registradas</span>
+                <span class="empty-hint">¡Juega para aparecer aquí!</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card de Conquistas del Portfolio -->
+          <div class="progress-card conquests-card">
+            <div class="card-header">
+              <span class="card-icon">🌟</span>
+              <h3 class="card-title">Conquistas del Portfolio</h3>
+            </div>
+            <div class="conquests-content">
+              <div class="conquest-items" id="conquest-items">
+                <div class="conquest-item" data-conquest="about">
+                  <div class="conquest-icon-wrapper">
+                    <span class="conquest-icon">📋</span>
+                  </div>
+                  <div class="conquest-info">
+                    <span class="conquest-name">Sobre Mí</span>
+                    <span class="conquest-status-text" id="conquest-about-status">No conquistado</span>
+                  </div>
+                  <span class="conquest-check" id="conquest-about-check">⭕</span>
+                </div>
+                <div class="conquest-item" data-conquest="experience">
+                  <div class="conquest-icon-wrapper">
+                    <span class="conquest-icon">💼</span>
+                  </div>
+                  <div class="conquest-info">
+                    <span class="conquest-name">Experiencia</span>
+                    <span class="conquest-status-text" id="conquest-experience-status">No conquistado</span>
+                  </div>
+                  <span class="conquest-check" id="conquest-experience-check">⭕</span>
+                </div>
+                <div class="conquest-item" data-conquest="portfolio">
+                  <div class="conquest-icon-wrapper">
+                    <span class="conquest-icon">🎨</span>
+                  </div>
+                  <div class="conquest-info">
+                    <span class="conquest-name">Portfolio</span>
+                    <span class="conquest-status-text" id="conquest-portfolio-status">No conquistado</span>
+                  </div>
+                  <span class="conquest-check" id="conquest-portfolio-check">⭕</span>
+                </div>
+              </div>
+              <div class="space-commander-status" id="space-commander-status">
+                <span class="commander-icon">🚀</span>
+                <span class="commander-text">Conquista las 3 secciones para convertirte en</span>
+                <span class="commander-title">SPACE COMMANDER</span>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
     </section>

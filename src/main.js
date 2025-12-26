@@ -87,6 +87,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Inicializar sistema de notificaciones toast
   initToastSystem();
   
+  // Inicializar página de progreso
+  initProgressPage();
+  
   // Inicializar navegación por teclado
   initKeyboardNavigation();
   
@@ -978,6 +981,378 @@ function createConquestStars() {
 }
 
 // ============================================
+// PÁGINA DE PROGRESO - DASHBOARD
+// ============================================
+
+const GLOBAL_STATS_KEY = 'portfolio_global_stats';
+const ACHIEVEMENTS_KEY = 'portfolio_achievements';
+const LEADERBOARD_KEY = 'portfolio_leaderboard';
+
+// Sistema de rangos
+const RANKS = [
+  { name: 'Cadete', icon: '🎖️', minScore: 0, maxScore: 1000 },
+  { name: 'Teniente', icon: '🎗️', minScore: 1000, maxScore: 5000 },
+  { name: 'Capitán', icon: '⭐', minScore: 5000, maxScore: 15000 },
+  { name: 'Comandante', icon: '🌟', minScore: 15000, maxScore: 50000 },
+  { name: 'Almirante', icon: '💫', minScore: 50000, maxScore: Infinity }
+];
+
+function initProgressPage() {
+  // Cargar y renderizar estadísticas cuando se carga la página
+  renderProgressPage();
+  
+  // También actualizar cuando se navega a la página de progreso
+  document.querySelectorAll('.nav-link').forEach(link => {
+    link.addEventListener('click', () => {
+      if (link.dataset.page === 'progress') {
+        setTimeout(renderProgressPage, 100);
+      }
+    });
+  });
+}
+
+function renderProgressPage() {
+  const stats = loadGlobalStats();
+  const achievements = loadAchievements();
+  const leaderboard = loadLeaderboard();
+  const conquests = loadConquests();
+  
+  // Renderizar cada sección
+  renderRankCard(stats);
+  renderAchievements(achievements);
+  renderCombatStats(stats);
+  renderArsenalStats(stats);
+  renderRecords(stats);
+  renderLeaderboard(leaderboard);
+  renderConquestsCard(conquests);
+}
+
+function loadGlobalStats() {
+  try {
+    const saved = localStorage.getItem(GLOBAL_STATS_KEY);
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch (e) {
+    console.warn('Error cargando estadísticas globales:', e);
+  }
+  return getDefaultGlobalStats();
+}
+
+function getDefaultGlobalStats() {
+  return {
+    totalGamesPlayed: 0,
+    totalScore: 0,
+    totalCrystals: 0,
+    totalEnemiesKilled: 0,
+    totalEnemiesByType: {
+      SCOUT: 0,
+      DRIFTER: 0,
+      TANK: 0,
+      SHOOTER: 0,
+      SWARM: 0
+    },
+    totalBulletsFired: 0,
+    totalBulletsHit: 0,
+    totalMissilesFired: 0,
+    totalMissilesHit: 0,
+    totalPlayTime: 0,
+    totalSpawnersDestroyed: 0,
+    bossesDefeated: 0,
+    gamesCompleted: 0,
+    highestScore: 0,
+    highestCombo: 0,
+    mostCrystalsInGame: 0,
+    fastestCompletion: null,
+    longestGame: 0,
+    totalUpgradesPurchased: 0
+  };
+}
+
+function loadAchievements() {
+  try {
+    const saved = localStorage.getItem(ACHIEVEMENTS_KEY);
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch (e) {
+    console.warn('Error cargando logros:', e);
+  }
+  return {
+    firstBlood: false,
+    combo5: false,
+    combo10: false,
+    combo20: false,
+    crystalCollector: false,
+    bossSlayer: false,
+    perfectSection: false,
+    speedRunner: false,
+    upgradeMaster: false,
+    survivor: false
+  };
+}
+
+function loadLeaderboard() {
+  try {
+    const saved = localStorage.getItem(LEADERBOARD_KEY);
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch (e) {
+    console.warn('Error cargando leaderboard:', e);
+  }
+  return [];
+}
+
+function getRank(totalScore) {
+  for (let i = RANKS.length - 1; i >= 0; i--) {
+    if (totalScore >= RANKS[i].minScore) {
+      return { 
+        ...RANKS[i], 
+        index: i,
+        nextRank: RANKS[i + 1] || null
+      };
+    }
+  }
+  return { ...RANKS[0], index: 0, nextRank: RANKS[1] };
+}
+
+function renderRankCard(stats) {
+  const rank = getRank(stats.totalScore);
+  
+  // Icono y nombre del rango
+  const rankIcon = document.getElementById('rank-icon');
+  const rankName = document.getElementById('rank-name');
+  if (rankIcon) rankIcon.textContent = rank.icon;
+  if (rankName) rankName.textContent = rank.name;
+  
+  // Barra de progreso
+  const progressFill = document.getElementById('rank-progress-fill');
+  const progressText = document.getElementById('rank-progress-text');
+  const nextRankText = document.getElementById('rank-next');
+  
+  if (rank.nextRank) {
+    const progress = ((stats.totalScore - rank.minScore) / (rank.maxScore - rank.minScore)) * 100;
+    if (progressFill) progressFill.style.width = `${Math.min(progress, 100)}%`;
+    if (progressText) progressText.textContent = `${stats.totalScore.toLocaleString()} / ${rank.maxScore.toLocaleString()} pts`;
+    if (nextRankText) nextRankText.textContent = `Siguiente: ${rank.nextRank.name}`;
+  } else {
+    if (progressFill) progressFill.style.width = '100%';
+    if (progressText) progressText.textContent = `${stats.totalScore.toLocaleString()} pts - ¡RANGO MÁXIMO!`;
+    if (nextRankText) nextRankText.textContent = '¡Has alcanzado el rango máximo!';
+  }
+  
+  // Stats mini
+  const totalGames = document.getElementById('total-games');
+  const totalScore = document.getElementById('total-score');
+  const totalTime = document.getElementById('total-time');
+  
+  if (totalGames) totalGames.textContent = stats.totalGamesPlayed.toLocaleString();
+  if (totalScore) totalScore.textContent = stats.totalScore.toLocaleString();
+  if (totalTime) totalTime.textContent = formatPlayTime(stats.totalPlayTime);
+}
+
+function renderAchievements(achievements) {
+  const achievementsGrid = document.getElementById('achievements-grid');
+  if (!achievementsGrid) return;
+  
+  const achievementItems = achievementsGrid.querySelectorAll('.achievement-item');
+  let unlockedCount = 0;
+  
+  achievementItems.forEach(item => {
+    const achievementId = item.dataset.achievement;
+    if (achievements[achievementId]) {
+      item.classList.remove('locked');
+      item.classList.add('unlocked');
+      unlockedCount++;
+    } else {
+      item.classList.add('locked');
+      item.classList.remove('unlocked');
+    }
+  });
+  
+  // Actualizar contador
+  const counter = document.getElementById('achievements-counter');
+  if (counter) {
+    counter.textContent = `${unlockedCount}/10`;
+  }
+}
+
+function renderCombatStats(stats) {
+  // Enemigos por tipo
+  const types = ['scout', 'drifter', 'tank', 'shooter', 'swarm'];
+  types.forEach(type => {
+    const countEl = document.getElementById(`kills-${type}`);
+    if (countEl) {
+      const typeKey = type.toUpperCase();
+      countEl.textContent = (stats.totalEnemiesByType[typeKey] || 0).toLocaleString();
+    }
+  });
+  
+  // Totales
+  const totalEnemies = document.getElementById('total-enemies');
+  const totalSpawners = document.getElementById('total-spawners');
+  const totalBosses = document.getElementById('total-bosses');
+  
+  if (totalEnemies) totalEnemies.textContent = stats.totalEnemiesKilled.toLocaleString();
+  if (totalSpawners) totalSpawners.textContent = stats.totalSpawnersDestroyed.toLocaleString();
+  if (totalBosses) totalBosses.textContent = stats.bossesDefeated.toLocaleString();
+}
+
+function renderArsenalStats(stats) {
+  // Accuracy de balas
+  const bulletAccuracy = stats.totalBulletsFired > 0 
+    ? Math.round((stats.totalBulletsHit / stats.totalBulletsFired) * 100) 
+    : 0;
+  
+  const bulletAccuracyEl = document.getElementById('bullet-accuracy');
+  const bulletAccuracyFill = document.getElementById('bullet-accuracy-fill');
+  const bulletsHit = document.getElementById('bullets-hit');
+  const bulletsFired = document.getElementById('bullets-fired');
+  
+  if (bulletAccuracyEl) bulletAccuracyEl.textContent = `${bulletAccuracy}%`;
+  if (bulletAccuracyFill) bulletAccuracyFill.style.width = `${bulletAccuracy}%`;
+  if (bulletsHit) bulletsHit.textContent = stats.totalBulletsHit.toLocaleString();
+  if (bulletsFired) bulletsFired.textContent = stats.totalBulletsFired.toLocaleString();
+  
+  // Accuracy de misiles
+  const missileAccuracy = stats.totalMissilesFired > 0 
+    ? Math.round((stats.totalMissilesHit / stats.totalMissilesFired) * 100) 
+    : 0;
+  
+  const missileAccuracyEl = document.getElementById('missile-accuracy');
+  const missileAccuracyFill = document.getElementById('missile-accuracy-fill');
+  const missilesHit = document.getElementById('missiles-hit');
+  const missilesFired = document.getElementById('missiles-fired');
+  
+  if (missileAccuracyEl) missileAccuracyEl.textContent = `${missileAccuracy}%`;
+  if (missileAccuracyFill) missileAccuracyFill.style.width = `${missileAccuracy}%`;
+  if (missilesHit) missilesHit.textContent = stats.totalMissilesHit.toLocaleString();
+  if (missilesFired) missilesFired.textContent = stats.totalMissilesFired.toLocaleString();
+  
+  // Mejoras compradas
+  const totalUpgrades = document.getElementById('total-upgrades');
+  if (totalUpgrades) totalUpgrades.textContent = stats.totalUpgradesPurchased.toLocaleString();
+}
+
+function renderRecords(stats) {
+  const recordScore = document.getElementById('record-score');
+  const recordCombo = document.getElementById('record-combo');
+  const recordCrystals = document.getElementById('record-crystals');
+  const recordLongest = document.getElementById('record-longest');
+  const recordFastest = document.getElementById('record-fastest');
+  const recordCompleted = document.getElementById('record-completed');
+  
+  if (recordScore) recordScore.textContent = stats.highestScore.toLocaleString();
+  if (recordCombo) recordCombo.textContent = `x${stats.highestCombo}`;
+  if (recordCrystals) recordCrystals.textContent = stats.mostCrystalsInGame.toLocaleString();
+  if (recordLongest) recordLongest.textContent = formatTime(stats.longestGame);
+  if (recordFastest) recordFastest.textContent = stats.fastestCompletion ? formatTime(stats.fastestCompletion) : '--:--';
+  if (recordCompleted) recordCompleted.textContent = stats.gamesCompleted.toLocaleString();
+}
+
+function renderLeaderboard(leaderboard) {
+  const leaderboardList = document.getElementById('leaderboard-list');
+  if (!leaderboardList) return;
+  
+  // Ordenar por puntuación
+  const sortedLeaderboard = [...leaderboard]
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5);
+  
+  if (sortedLeaderboard.length === 0) {
+    leaderboardList.innerHTML = `
+      <div class="leaderboard-empty">
+        <span class="empty-icon">🎮</span>
+        <span class="empty-text">Aún no hay partidas registradas</span>
+        <span class="empty-hint">¡Juega para aparecer aquí!</span>
+      </div>
+    `;
+    return;
+  }
+  
+  leaderboardList.innerHTML = sortedLeaderboard.map((entry, index) => `
+    <div class="leaderboard-entry ${index === 0 ? 'highlight' : ''}">
+      <span class="leaderboard-position">#${index + 1}</span>
+      <div class="leaderboard-info">
+        <span class="leaderboard-score">⭐ ${entry.score.toLocaleString()}</span>
+        <span class="leaderboard-date">${formatDate(entry.date)}</span>
+      </div>
+      <span class="leaderboard-combo">x${entry.maxCombo || 0}</span>
+      <span class="leaderboard-time">${formatTime(entry.time || 0)}</span>
+    </div>
+  `).join('');
+}
+
+function renderConquestsCard(conquests) {
+  const conquestItems = ['about', 'experience', 'portfolio'];
+  let completedCount = 0;
+  
+  conquestItems.forEach(id => {
+    const item = document.querySelector(`.conquest-item[data-conquest="${id}"]`);
+    const statusText = document.getElementById(`conquest-${id}-status`);
+    const check = document.getElementById(`conquest-${id}-check`);
+    
+    if (conquests[id]) {
+      completedCount++;
+      if (item) item.classList.add('completed');
+      if (statusText) statusText.textContent = '¡Conquistado!';
+      if (check) check.textContent = '⭐';
+    } else {
+      if (item) item.classList.remove('completed');
+      if (statusText) statusText.textContent = 'No conquistado';
+      if (check) check.textContent = '⭕';
+    }
+  });
+  
+  // Space Commander status
+  const commanderStatus = document.getElementById('space-commander-status');
+  if (commanderStatus) {
+    if (completedCount === 3) {
+      commanderStatus.classList.add('achieved');
+      commanderStatus.querySelector('.commander-text').textContent = '¡Felicidades! Eres un';
+    } else {
+      commanderStatus.classList.remove('achieved');
+      commanderStatus.querySelector('.commander-text').textContent = `Conquista las 3 secciones para convertirte en`;
+    }
+  }
+}
+
+// Funciones auxiliares de formato
+function formatTime(ms) {
+  if (!ms || ms === 0) return '0:00';
+  const totalSeconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
+function formatPlayTime(ms) {
+  if (!ms || ms === 0) return '0h 0m';
+  const totalSeconds = Math.floor(ms / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  return `${hours}h ${minutes}m`;
+}
+
+function formatDate(dateString) {
+  if (!dateString) return 'Sin fecha';
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('es-ES', { 
+      day: '2-digit', 
+      month: 'short', 
+      year: 'numeric' 
+    });
+  } catch (e) {
+    return 'Sin fecha';
+  }
+}
+
+// Exponer función para actualizar la página de progreso externamente
+window.updateProgressPage = renderProgressPage;
+
+// ============================================
 // SISTEMA DE NOTIFICACIONES TOAST
 // ============================================
 
@@ -1495,6 +1870,9 @@ function resetAllProgress() {
     // Limpiar logros
     localStorage.removeItem('portfolio_achievements');
     
+    // Limpiar estadísticas globales
+    localStorage.removeItem('portfolio_global_stats');
+    
     // Limpiar preferencias de audio
     localStorage.removeItem('portfolio_audio_prefs');
     
@@ -1559,7 +1937,7 @@ function initResetProgressButton() {
   if (!resetBtn) return;
   
   resetBtn.addEventListener('click', () => {
-    if (confirm('¿Estás seguro de que quieres restablecer TODO el progreso?\n\nEsto eliminará:\n- Todas las conquistas\n- El tutorial completado\n- El leaderboard\n- Los logros\n- El estado del onboarding')) {
+    if (confirm('¿Estás seguro de que quieres restablecer TODO el progreso?\n\nEsto eliminará:\n- Todas las conquistas\n- El tutorial completado\n- El leaderboard\n- Los logros\n- Las estadísticas globales\n- El rango de comandante\n- El estado del onboarding')) {
       const success = resetAllProgress();
       if (success) {
         // Recargar la página después de 500ms
