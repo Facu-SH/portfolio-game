@@ -96,6 +96,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Inicializar fondo de partículas
   initParticleBackground();
   
+  // Inicializar botón de resetear progreso
+  initResetProgressButton();
+  
   // Ocultar pantalla de carga cuando todo esté listo
   hideLoadingScreen();
 });
@@ -1469,6 +1472,104 @@ window.conquestSection = conquestSection;
 
 // Exponer función para inicializar el juego (activar/desactivar automáticamente)
 window.initializeGame = initializeGame;
+
+// ============================================
+// FUNCIÓN PARA RESETEAR PROGRESO
+// ============================================
+
+function resetAllProgress() {
+  try {
+    // Limpiar conquistas
+    localStorage.removeItem('portfolio_conquests');
+    
+    // Limpiar onboarding
+    localStorage.removeItem('portfolio_onboarding_seen');
+    sessionStorage.removeItem('portfolio_onboarding_seen_session');
+    
+    // Limpiar tutorial
+    localStorage.removeItem('portfolio_tutorial_completed');
+    
+    // Limpiar leaderboard
+    localStorage.removeItem('portfolio_leaderboard');
+    
+    // Limpiar logros
+    localStorage.removeItem('portfolio_achievements');
+    
+    // Limpiar preferencias de audio
+    localStorage.removeItem('portfolio_audio_prefs');
+    
+    // Remover clases visuales de conquistas
+    document.querySelectorAll('.nav-link').forEach(link => {
+      link.classList.remove('conquered');
+    });
+    
+    // Ocultar naves flotantes
+    const ship1 = document.getElementById('floating-ship-1');
+    const ship2 = document.getElementById('floating-ship-2');
+    if (ship1) ship1.classList.remove('visible');
+    if (ship2) ship2.classList.remove('visible');
+    
+    // Ocultar badge de Space Commander
+    const commanderBadge = document.getElementById('space-commander-badge');
+    if (commanderBadge) commanderBadge.classList.remove('visible');
+    
+    // Ocultar estrellas de conquista
+    const starsContainer = document.getElementById('conquest-stars');
+    if (starsContainer) {
+      starsContainer.classList.remove('visible');
+      starsContainer.innerHTML = '';
+    }
+    
+    // Resetear indicador de progreso
+    const progressContainer = document.getElementById('conquest-progress');
+    if (progressContainer) {
+      progressContainer.classList.remove('visible');
+      const countEl = document.getElementById('conquest-count');
+      const fillEl = document.getElementById('conquest-fill');
+      if (countEl) countEl.textContent = '0/3';
+      if (fillEl) fillEl.style.width = '0%';
+      
+      // Resetear estados de secciones
+      progressContainer.querySelectorAll('.conquest-section').forEach(section => {
+        section.classList.remove('completed');
+        const status = section.querySelector('.conquest-status');
+        if (status) status.textContent = '⭕';
+      });
+    }
+    
+    console.log('✅ Todo el progreso ha sido restablecido');
+    console.log('🔄 Recarga la página para ver los cambios');
+    
+    return true;
+  } catch (e) {
+    console.error('❌ Error al restablecer progreso:', e);
+    return false;
+  }
+}
+
+// Exponer función para resetear progreso
+window.resetAllProgress = resetAllProgress;
+
+// ============================================
+// BOTÓN DE RESETEAR PROGRESO
+// ============================================
+
+function initResetProgressButton() {
+  const resetBtn = document.getElementById('reset-progress-btn');
+  if (!resetBtn) return;
+  
+  resetBtn.addEventListener('click', () => {
+    if (confirm('¿Estás seguro de que quieres restablecer TODO el progreso?\n\nEsto eliminará:\n- Todas las conquistas\n- El tutorial completado\n- El leaderboard\n- Los logros\n- El estado del onboarding')) {
+      const success = resetAllProgress();
+      if (success) {
+        // Recargar la página después de 500ms
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
+      }
+    }
+  });
+}
 
 // Exportar game para debugging
 window.game = game;

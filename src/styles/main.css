@@ -470,6 +470,35 @@ body.game-mode .game-toggle {
   display: none;
 }
 
+/* Botón de resetear progreso (temporal para desarrollo) */
+.reset-progress-btn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 50px;
+  height: 50px;
+  background: rgba(255, 0, 0, 0.2);
+  border: 2px solid rgba(255, 0, 0, 0.5);
+  border-radius: var(--radius-full);
+  color: #ff6666;
+  font-size: 18px;
+  cursor: pointer;
+  z-index: 1000;
+  transition: var(--transition-base);
+  backdrop-filter: blur(10px);
+}
+
+.reset-progress-btn:hover {
+  background: rgba(255, 0, 0, 0.4);
+  border-color: #ff0000;
+  transform: scale(1.1);
+  box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+}
+
+.reset-progress-btn:active {
+  transform: scale(0.95);
+}
+
 /* ============================================
    ONBOARDING MODAL
    ============================================ */
@@ -1059,7 +1088,7 @@ body.game-mode .game-toggle {
   display: none;
   min-height: calc(100vh - var(--nav-height));
   padding: var(--page-padding);
-  animation: fadeIn 0.4s ease;
+  /* Sin animación base para evitar conflictos con warp transitions */
 }
 
 .page.active {
@@ -2594,23 +2623,37 @@ body.game-mode .game-toggle {
   }
 }
 
-.page.active .about-hero,
-.page.active .page-header,
-.page.active .experience-section,
-.page.active .portfolio-filters,
-.page.active .portfolio-card {
+/* Estado inicial de elementos durante warp-enter (para que slideUp funcione) */
+.page.warp-enter .about-hero,
+.page.warp-enter .page-header,
+.page.warp-enter .experience-section,
+.page.warp-enter .portfolio-filters,
+.page.warp-enter .portfolio-card {
+  opacity: 0;
+  transform: translateY(30px);
   animation: slideUp 0.6s ease forwards;
+  animation-delay: 0.2s; /* Esperar a que la animación warp comience */
 }
 
-.page.active .experience-section:nth-child(2) { animation-delay: 0.1s; }
-.page.active .experience-section:nth-child(3) { animation-delay: 0.2s; }
+.page.warp-enter .experience-section:nth-child(2) { animation-delay: 0.3s; }
+.page.warp-enter .experience-section:nth-child(3) { animation-delay: 0.4s; }
 
-.page.active .portfolio-card:nth-child(1) { animation-delay: 0.05s; }
-.page.active .portfolio-card:nth-child(2) { animation-delay: 0.1s; }
-.page.active .portfolio-card:nth-child(3) { animation-delay: 0.15s; }
-.page.active .portfolio-card:nth-child(4) { animation-delay: 0.2s; }
-.page.active .portfolio-card:nth-child(5) { animation-delay: 0.25s; }
-.page.active .portfolio-card:nth-child(6) { animation-delay: 0.3s; }
+.page.warp-enter .portfolio-card:nth-child(1) { animation-delay: 0.25s; }
+.page.warp-enter .portfolio-card:nth-child(2) { animation-delay: 0.3s; }
+.page.warp-enter .portfolio-card:nth-child(3) { animation-delay: 0.35s; }
+.page.warp-enter .portfolio-card:nth-child(4) { animation-delay: 0.4s; }
+.page.warp-enter .portfolio-card:nth-child(5) { animation-delay: 0.45s; }
+.page.warp-enter .portfolio-card:nth-child(6) { animation-delay: 0.5s; }
+
+/* Elementos visibles inmediatamente cuando no hay animación warp */
+.page.active:not(.warp-enter) .about-hero,
+.page.active:not(.warp-enter) .page-header,
+.page.active:not(.warp-enter) .experience-section,
+.page.active:not(.warp-enter) .portfolio-filters,
+.page.active:not(.warp-enter) .portfolio-card {
+  opacity: 1;
+  transform: none;
+}
 
 /* ============================================
    CONTACT PAGE

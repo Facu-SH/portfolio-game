@@ -2240,6 +2240,16 @@ export class MainScene extends Phaser.Scene {
   showTutorialStep() {
     if (!this.tutorialUI) return;
     
+    // Destruir intervalos del paso anterior
+    if (this.tutorialIntervals) {
+      this.tutorialIntervals.forEach(interval => {
+        if (interval && interval.destroy) {
+          interval.destroy();
+        }
+      });
+      this.tutorialIntervals = [];
+    }
+    
     const steps = this.getTutorialSteps();
     if (this.tutorialStep >= steps.length) {
       this.completeTutorial();
@@ -2387,11 +2397,32 @@ export class MainScene extends Phaser.Scene {
     const dotsInterval = this.time.addEvent({
       delay: 400,
       callback: () => {
-        dots = (dots + 1) % 4;
-        continueText.setText(`⏳ Continúa automáticamente${'...'.substring(0, dots + 1)}`);
+        // Verificar que el texto existe y está activo antes de actualizarlo
+        if (!continueText || !continueText.active || !continueText.scene) {
+          if (dotsInterval) {
+            dotsInterval.destroy();
+          }
+          return;
+        }
+        
+        try {
+          dots = (dots + 1) % 4;
+          continueText.setText(`⏳ Continúa automáticamente${'...'.substring(0, dots + 1)}`);
+        } catch (e) {
+          // Si hay un error, destruir el intervalo
+          if (dotsInterval) {
+            dotsInterval.destroy();
+          }
+        }
       },
       loop: true
     });
+    
+    // Guardar referencia del intervalo para poder destruirlo después
+    if (!this.tutorialIntervals) {
+      this.tutorialIntervals = [];
+    }
+    this.tutorialIntervals.push(dotsInterval);
     
     // Añadir highlight visual si corresponde
     if (step.highlight) {
@@ -2476,6 +2507,16 @@ export class MainScene extends Phaser.Scene {
   completeTutorial() {
     this.tutorialCompleted = true;
     this.saveTutorialState();
+    
+    // Destruir todos los intervalos del tutorial
+    if (this.tutorialIntervals) {
+      this.tutorialIntervals.forEach(interval => {
+        if (interval && interval.destroy) {
+          interval.destroy();
+        }
+      });
+      this.tutorialIntervals = [];
+    }
     
     if (this.tutorialUI) {
       this.tweens.add({
