@@ -11,6 +11,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Inicializar el juego
   game.init();
   
+  // Inicializar el juego automáticamente (activar y desactivar para que funcione correctamente)
+  initializeGame();
+  
   // Inicializar navegación
   initNavigation();
   
@@ -183,51 +186,71 @@ function initCarousels() {
 // CONTROLES DEL JUEGO
 // ============================================
 
+// Función para inicializar el juego (activar y desactivar automáticamente)
+function initializeGame() {
+  // Activar el juego
+  game.toggle();
+  document.body.classList.add('game-mode');
+  
+  // Esperar un momento y luego desactivarlo
+  setTimeout(() => {
+    game.toggle();
+    document.body.classList.remove('game-mode');
+    
+    // Asegurar que el botón de inicio esté visible
+    const startBtn = document.getElementById('start-game-btn');
+    if (startBtn) {
+      startBtn.classList.remove('hidden');
+    }
+  }, 100);
+}
+
 function initGameControls() {
-  const startGameAboutBtn = document.getElementById('start-game-about');
   const startBtn = document.getElementById('start-game-btn');
   
-  // Botón de juego en la sección "Sobre mí"
-  if (startGameAboutBtn) {
-    startGameAboutBtn.addEventListener('click', () => {
+  // Función para actualizar visibilidad del botón de inicio
+  function updateStartButtonVisibility() {
+    if (startBtn) {
+      if (game.isEnabled) {
+        // Ocultar cuando el juego está activo
+        startBtn.classList.add('hidden');
+      } else {
+        // Mostrar cuando el juego está desactivado
+        startBtn.classList.remove('hidden');
+      }
+    }
+  }
+  
+  // Botón de inicio del juego (abajo en el medio)
+  if (startBtn) {
+    startBtn.addEventListener('click', () => {
       const mainScene = game.game?.scene?.getScene('MainScene');
       
       if (!game.isEnabled) {
-        // Activando el juego
+        // Activar el juego primero
         game.toggle();
-        
-        // Navegar a la primera sección (About Me) si no estamos ya ahí
-        const aboutPage = document.getElementById('page-about');
-        if (aboutPage && !aboutPage.classList.contains('active')) {
-          const aboutLink = document.querySelector('.nav-link[data-page="about"]');
-          if (aboutLink) {
-            aboutLink.click();
+        document.body.classList.add('game-mode');
+        updateStartButtonVisibility();
+      }
+      
+      // Esperar un momento para que el juego se inicialice y luego iniciarlo
+      setTimeout(() => {
+        const scene = game.game?.scene?.getScene('MainScene');
+        if (scene) {
+          // Si el juego no está en IDLE, reiniciarlo primero
+          if (scene.gameState !== 'IDLE') {
+            scene.restartGame();
+          } else {
+            // Iniciar el juego directamente
+            scene.startGame();
           }
         }
-        
-        // Esperar un momento para que el juego se inicialice y luego iniciarlo
-        setTimeout(() => {
-          const scene = game.game?.scene?.getScene('MainScene');
-          if (scene) {
-            // Si el juego no está en IDLE, reiniciarlo primero
-            if (scene.gameState !== 'IDLE') {
-              scene.restartGame();
-            } else {
-              // Iniciar el juego directamente
-              scene.startGame();
-            }
-          }
-        }, 200);
-      }
+      }, 200);
     });
   }
   
-  // Ocultar el botón de inicio alternativo (ya no se usa)
-  if (startBtn) {
-    startBtn.classList.add('hidden');
-    // Asegurarse de que siempre esté oculto
-    startBtn.style.display = 'none';
-  }
+  // Inicializar visibilidad del botón
+  updateStartButtonVisibility();
 }
 
 // ============================================
@@ -445,6 +468,9 @@ function createConquestStars() {
 
 // Exponer función para que el juego pueda marcar secciones como conquistadas
 window.conquestSection = conquestSection;
+
+// Exponer función para inicializar el juego (activar/desactivar automáticamente)
+window.initializeGame = initializeGame;
 
 // Exportar game para debugging
 window.game = game;

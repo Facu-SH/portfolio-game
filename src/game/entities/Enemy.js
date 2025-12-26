@@ -34,13 +34,17 @@ export class Enemy extends Phaser.GameObjects.Container {
     // Para swarm
     this.swarmOffset = Math.random() * Math.PI * 2;
     
-    // Crear gráficos
-    this.createGraphics();
-    
+    // Agregar Container a la escena PRIMERO
     scene.add.existing(this);
     
     // Configurar depth para que esté visible
     this.setDepth(10);
+    this.setVisible(true);
+    this.setActive(true);
+    this.setAlpha(1);
+    
+    // Crear gráficos DESPUÉS de agregar a la escena
+    this.createGraphics();
     
     // Física
     scene.physics.add.existing(this);
@@ -65,6 +69,11 @@ export class Enemy extends Phaser.GameObjects.Container {
     
     this.graphics = this.scene.add.graphics();
     
+    // Asegurar que el graphics esté configurado correctamente
+    this.graphics.setVisible(true);
+    this.graphics.setActive(true);
+    this.graphics.setAlpha(1);
+    
     // Dibujar según tipo
     switch (this.type) {
       case 'SCOUT':
@@ -86,7 +95,17 @@ export class Enemy extends Phaser.GameObjects.Container {
         this.drawScout(size, color);
     }
     
-    this.add(this.graphics);
+    // IMPORTANTE: Agregar Graphics directamente a la escena, NO al Container
+    // Los Graphics dentro de Containers no se renderizan correctamente en Phaser 3
+    this.scene.add.existing(this.graphics);
+    this.graphics.setDepth(10);
+    this.graphics.setPosition(this.x, this.y);
+    this.graphics.setVisible(true);
+    this.graphics.setActive(true);
+    this.graphics.setAlpha(1);
+    
+    // Guardar referencia para actualizar posición en update()
+    this.graphicsNeedsUpdate = true;
     
     // Barra de vida
     this.createHealthBar();
@@ -226,6 +245,14 @@ export class Enemy extends Phaser.GameObjects.Container {
   update(time, delta, playerX, playerY) {
     if (this.hp <= 0 || !this.active) return;
     
+    // Actualizar posición del Graphics si está fuera del Container
+    if (this.graphics && this.graphicsNeedsUpdate) {
+      this.graphics.setPosition(this.x, this.y);
+      this.graphics.setRotation(this.rotation);
+      this.graphics.setAlpha(this.alpha);
+      this.graphics.setScale(this.scaleX, this.scaleY);
+    }
+    
     // Actualizar barra de vida
     this.updateHealthBar();
     
@@ -297,13 +324,15 @@ export class Enemy extends Phaser.GameObjects.Container {
   takeDamage(amount) {
     this.hp -= amount;
     
-    // Flash de daño
-    this.scene.tweens.add({
-      targets: this.graphics,
-      alpha: 0.3,
-      duration: 50,
-      yoyo: true
-    });
+    // Flash de daño - solo si graphics existe y está activo
+    if (this.graphics && this.scene && this.scene.tweens && this.graphics.active) {
+      this.scene.tweens.add({
+        targets: this.graphics,
+        alpha: 0.3,
+        duration: 50,
+        yoyo: true
+      });
+    }
     
     if (this.hp <= 0) {
       this.die();
@@ -314,26 +343,45 @@ export class Enemy extends Phaser.GameObjects.Container {
   }
   
   die() {
+    // Destruir Graphics si está fuera del Container
+    if (this.graphics && this.graphicsNeedsUpdate) {
+      this.graphics.destroy();
+      this.graphics = null;
+    }
+    
     // Destruir barra de vida
     if (this.healthBar) {
       this.healthBar.destroy();
       this.healthBar = null;
     }
     
+    // Verificar que la escena existe antes de emitir eventos o crear tweens
+    if (!this.scene) {
+      this.destroy();
+      return;
+    }
+    
     // Emitir evento con posición y datos para drops/puntos
-    this.scene.events.emit('enemyDeath', this.x, this.y, this.points, this.crystalDrop, this.type);
+    if (this.scene.events) {
+      this.scene.events.emit('enemyDeath', this.x, this.y, this.points, this.crystalDrop, this.type);
+    }
     
     // Animación de muerte
-    this.scene.tweens.add({
-      targets: this,
-      alpha: 0,
-      scale: 1.5,
-      duration: 200,
-      ease: 'Power2',
-      onComplete: () => {
-        this.destroy();
-      }
-    });
+    if (this.scene.tweens) {
+      this.scene.tweens.add({
+        targets: this,
+        alpha: 0,
+        scale: 1.5,
+        duration: 200,
+        ease: 'Power2',
+        onComplete: () => {
+          this.destroy();
+        }
+      });
+    } else {
+      // Si no hay tweens, destruir directamente
+      this.destroy();
+    }
     
     // Partículas de explosión
     this.createDeathParticles();

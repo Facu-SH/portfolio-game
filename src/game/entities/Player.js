@@ -30,17 +30,20 @@ export class Player extends Phaser.GameObjects.Container {
     this.targetY = y;
     this.lerpFactor = GAME_CONFIG.PLAYER.LERP_FACTOR;
     
-    // Crear gráficos de la nave
-    this.createShipGraphics();
-    
-    // Crear indicador de cooldown del misil
-    this.createCooldownIndicator();
-    
-    // Agregar al scene
+    // Agregar al scene PRIMERO
     scene.add.existing(this);
     
     // Configurar depth para que esté visible
     this.setDepth(10);
+    this.setVisible(true);
+    this.setActive(true);
+    this.setAlpha(1);
+    
+    // Crear gráficos de la nave DESPUÉS de agregar a la escena
+    this.createShipGraphics();
+    
+    // Crear indicador de cooldown del misil
+    this.createCooldownIndicator();
     
     // Configurar física
     scene.physics.add.existing(this);
@@ -53,6 +56,10 @@ export class Player extends Phaser.GameObjects.Container {
   createShipGraphics() {
     // Cuerpo principal de la nave (triángulo apuntando hacia arriba)
     this.shipBody = this.scene.add.graphics();
+    this.shipBody.setVisible(true);
+    this.shipBody.setActive(true);
+    this.shipBody.setAlpha(1);
+    
     this.shipBody.lineStyle(2, GAME_CONFIG.COLORS.CYAN_NEON, 1);
     this.shipBody.fillStyle(0x001a33, 0.8);
     
@@ -70,13 +77,32 @@ export class Player extends Phaser.GameObjects.Container {
     
     // Motor (glow)
     this.engineGlow = this.scene.add.graphics();
+    this.engineGlow.setVisible(true);
+    this.engineGlow.setActive(true);
+    this.engineGlow.setAlpha(1);
     this.updateEngineGlow(1);
     
     // Cabina
     this.shipBody.fillStyle(GAME_CONFIG.COLORS.CYAN_NEON, 0.3);
     this.shipBody.fillCircle(0, -5, 5);
     
-    this.add([this.engineGlow, this.shipBody]);
+    // IMPORTANTE: Agregar Graphics directamente a la escena, NO al Container
+    // Los Graphics dentro de Containers no se renderizan correctamente en Phaser 3
+    this.scene.add.existing(this.shipBody);
+    this.scene.add.existing(this.engineGlow);
+    this.shipBody.setDepth(10);
+    this.engineGlow.setDepth(10);
+    this.shipBody.setPosition(this.x, this.y);
+    this.engineGlow.setPosition(this.x, this.y);
+    this.shipBody.setVisible(true);
+    this.shipBody.setActive(true);
+    this.shipBody.setAlpha(1);
+    this.engineGlow.setVisible(true);
+    this.engineGlow.setActive(true);
+    this.engineGlow.setAlpha(1);
+    
+    // Guardar referencia para actualizar posición en update()
+    this.graphicsNeedsUpdate = true;
   }
   
   updateEngineGlow(intensity) {
@@ -91,7 +117,13 @@ export class Player extends Phaser.GameObjects.Container {
   
   createCooldownIndicator() {
     this.cooldownRing = this.scene.add.graphics();
-    this.add(this.cooldownRing);
+    // Agregar directamente a la escena también
+    this.scene.add.existing(this.cooldownRing);
+    this.cooldownRing.setDepth(11); // Por encima de la nave
+    this.cooldownRing.setPosition(this.x, this.y);
+    this.cooldownRing.setVisible(true);
+    this.cooldownRing.setActive(true);
+    this.cooldownRing.setAlpha(1);
   }
   
   updateCooldownIndicator() {
@@ -134,6 +166,23 @@ export class Player extends Phaser.GameObjects.Container {
     // Movimiento suave hacia el cursor
     this.x = Phaser.Math.Linear(this.x, this.targetX, this.lerpFactor);
     this.y = Phaser.Math.Linear(this.y, this.targetY, this.lerpFactor);
+    
+    // Actualizar posición de los Graphics si están fuera del Container
+    if (this.graphicsNeedsUpdate && this.shipBody && this.engineGlow) {
+      this.shipBody.setPosition(this.x, this.y);
+      this.engineGlow.setPosition(this.x, this.y);
+      this.shipBody.setRotation(this.rotation);
+      this.engineGlow.setRotation(this.rotation);
+      this.shipBody.setAlpha(this.alpha);
+      this.engineGlow.setAlpha(this.alpha);
+    }
+    
+    // Actualizar posición del cooldownRing si está fuera del Container
+    if (this.cooldownRing && !this.cooldownRing.parentContainer) {
+      this.cooldownRing.setPosition(this.x, this.y);
+      this.cooldownRing.setRotation(this.rotation);
+      this.cooldownRing.setAlpha(this.alpha);
+    }
     
     // Calcular distancia al cursor
     const distance = Phaser.Math.Distance.Between(this.x, this.y, this.targetX, this.targetY);

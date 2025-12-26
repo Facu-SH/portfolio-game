@@ -318,6 +318,12 @@ export class MainScene extends Phaser.Scene {
       this.score += 500;
       this.updateHUD();
       
+      // NO completar la pantalla si es una pelea de jefe - solo se completa cuando el jefe muere
+      if (this.isBossFight) {
+        console.log('⚔️ Spawner destruido durante pelea de jefe - esperando a que el jefe muera');
+        return;
+      }
+      
       // Verificar si quedan spawners activos
       const activeSpawners = this.spawners.getChildren().filter(s => s.active && !s.isDestroyed);
       
@@ -1337,6 +1343,12 @@ export class MainScene extends Phaser.Scene {
   }
   
   sectionComplete() {
+    // NO completar si es una pelea de jefe - solo se completa cuando el jefe muere
+    if (this.isBossFight) {
+      console.log('⚔️ Intento de completar pantalla durante pelea de jefe - ignorado');
+      return;
+    }
+    
     // Evitar múltiples llamadas
     if (this.screenCompleted) return;
     this.screenCompleted = true;
@@ -1734,6 +1746,12 @@ export class MainScene extends Phaser.Scene {
       window.conquestSection(lastSection.pageId);
     }
     
+    // Navegar a "Sobre mí"
+    const aboutLink = document.querySelector('.nav-link[data-page="about"]');
+    if (aboutLink) {
+      aboutLink.click();
+    }
+    
     this.createVictoryUI();
   }
   
@@ -1987,47 +2005,69 @@ export class MainScene extends Phaser.Scene {
     });
     message.setOrigin(0.5);
     
-    // Botón de reiniciar
-    const restartBtn = this.add.graphics();
-    restartBtn.fillStyle(0x003300, 1);
-    restartBtn.fillRoundedRect(-120, timelineY + 115, 240, 50, 10);
-    restartBtn.lineStyle(2, 0x00ff00, 1);
-    restartBtn.strokeRoundedRect(-120, timelineY + 115, 240, 50, 10);
+    // Botón para volver al portfolio
+    const backBtn = this.add.graphics();
+    backBtn.fillStyle(0x003300, 1);
+    backBtn.fillRoundedRect(-120, timelineY + 115, 240, 50, 10);
+    backBtn.lineStyle(2, 0x00ff00, 1);
+    backBtn.strokeRoundedRect(-120, timelineY + 115, 240, 50, 10);
     
-    const restartText = this.add.text(0, timelineY + 140, '🎮 VOLVER A JUGAR', {
+    const backText = this.add.text(0, timelineY + 140, '👋 VOLVER A SOBRE MÍ', {
       fontFamily: '"Orbitron", sans-serif',
       fontSize: '18px',
       color: '#00ff00'
     });
-    restartText.setOrigin(0.5);
+    backText.setOrigin(0.5);
     
     // Hacer el área del botón interactiva
     const hitArea = this.add.rectangle(0, timelineY + 140, 240, 50, 0x000000, 0);
     hitArea.setInteractive({ useHandCursor: true });
     
     hitArea.on('pointerover', () => {
-      restartBtn.clear();
-      restartBtn.fillStyle(0x005500, 1);
-      restartBtn.fillRoundedRect(-120, timelineY + 115, 240, 50, 10);
-      restartBtn.lineStyle(3, 0x00ff00, 1);
-      restartBtn.strokeRoundedRect(-120, timelineY + 115, 240, 50, 10);
-      restartText.setScale(1.05);
+      backBtn.clear();
+      backBtn.fillStyle(0x005500, 1);
+      backBtn.fillRoundedRect(-120, timelineY + 115, 240, 50, 10);
+      backBtn.lineStyle(3, 0x00ff00, 1);
+      backBtn.strokeRoundedRect(-120, timelineY + 115, 240, 50, 10);
+      backText.setScale(1.05);
     });
     
     hitArea.on('pointerout', () => {
-      restartBtn.clear();
-      restartBtn.fillStyle(0x003300, 1);
-      restartBtn.fillRoundedRect(-120, timelineY + 115, 240, 50, 10);
-      restartBtn.lineStyle(2, 0x00ff00, 1);
-      restartBtn.strokeRoundedRect(-120, timelineY + 115, 240, 50, 10);
-      restartText.setScale(1);
+      backBtn.clear();
+      backBtn.fillStyle(0x003300, 1);
+      backBtn.fillRoundedRect(-120, timelineY + 115, 240, 50, 10);
+      backBtn.lineStyle(2, 0x00ff00, 1);
+      backBtn.strokeRoundedRect(-120, timelineY + 115, 240, 50, 10);
+      backText.setScale(1);
     });
     
     hitArea.on('pointerdown', () => {
-      this.restartGame();
+      // Navegar a "Sobre mí" y ocultar el juego
+      const aboutLink = document.querySelector('.nav-link[data-page="about"]');
+      if (aboutLink) {
+        aboutLink.click();
+      }
+      
+      // Ocultar el juego y volver al portfolio
+      if (window.game) {
+        window.game.disable();
+        document.body.classList.remove('game-mode');
+      }
+      
+      // Mostrar botón de inicio
+      const startBtn = document.getElementById('start-game-btn');
+      if (startBtn) {
+        startBtn.classList.remove('hidden');
+      }
+      
+      // Ocultar UI de victoria
+      if (this.victoryUI) {
+        this.victoryUI.destroy();
+        this.victoryUI = null;
+      }
     });
     
-    this.victoryUI.add([bg, statsPanel, victoryText, mainStats, enemiesTitle, enemyContainer, upgradesTitle, upgradeContainer, timelineTitle, timelineContainer, message, restartBtn, restartText, hitArea]);
+    this.victoryUI.add([bg, statsPanel, victoryText, mainStats, enemiesTitle, enemyContainer, upgradesTitle, upgradeContainer, timelineTitle, timelineContainer, message, backBtn, backText, hitArea]);
     
     // Animación de entrada
     this.victoryUI.alpha = 0;
@@ -2067,6 +2107,12 @@ export class MainScene extends Phaser.Scene {
     // Ocultar barra de vida del jefe
     if (this.bossHealthContainer) {
       this.bossHealthContainer.setVisible(false);
+    }
+    
+    // Navegar a "Sobre mí"
+    const aboutLink = document.querySelector('.nav-link[data-page="about"]');
+    if (aboutLink) {
+      aboutLink.click();
     }
     
     // Crear UI de game over
@@ -2361,47 +2407,69 @@ export class MainScene extends Phaser.Scene {
     });
     deathInfoText.setOrigin(0.5);
     
-    // Botón de reiniciar
-    const restartBtn = this.add.graphics();
-    restartBtn.fillStyle(0x330022, 1);
-    restartBtn.fillRoundedRect(-120, timelineY + 105, 240, 50, 10);
-    restartBtn.lineStyle(2, 0xff0066, 1);
-    restartBtn.strokeRoundedRect(-120, timelineY + 105, 240, 50, 10);
+    // Botón para volver al portfolio
+    const backBtn = this.add.graphics();
+    backBtn.fillStyle(0x330022, 1);
+    backBtn.fillRoundedRect(-120, timelineY + 105, 240, 50, 10);
+    backBtn.lineStyle(2, 0xff0066, 1);
+    backBtn.strokeRoundedRect(-120, timelineY + 105, 240, 50, 10);
     
-    const restartText = this.add.text(0, timelineY + 130, '🔄 REINTENTAR', {
+    const backText = this.add.text(0, timelineY + 130, '👋 VOLVER A SOBRE MÍ', {
       fontFamily: '"Orbitron", sans-serif',
       fontSize: '18px',
       color: '#ff0066'
     });
-    restartText.setOrigin(0.5);
+    backText.setOrigin(0.5);
     
     // Hacer el área del botón interactiva
     const hitArea = this.add.rectangle(0, timelineY + 130, 240, 50, 0x000000, 0);
     hitArea.setInteractive({ useHandCursor: true });
     
     hitArea.on('pointerover', () => {
-      restartBtn.clear();
-      restartBtn.fillStyle(0x550033, 1);
-      restartBtn.fillRoundedRect(-120, timelineY + 105, 240, 50, 10);
-      restartBtn.lineStyle(3, 0xff0066, 1);
-      restartBtn.strokeRoundedRect(-120, timelineY + 105, 240, 50, 10);
-      restartText.setScale(1.05);
+      backBtn.clear();
+      backBtn.fillStyle(0x550033, 1);
+      backBtn.fillRoundedRect(-120, timelineY + 105, 240, 50, 10);
+      backBtn.lineStyle(3, 0xff0066, 1);
+      backBtn.strokeRoundedRect(-120, timelineY + 105, 240, 50, 10);
+      backText.setScale(1.05);
     });
     
     hitArea.on('pointerout', () => {
-      restartBtn.clear();
-      restartBtn.fillStyle(0x330022, 1);
-      restartBtn.fillRoundedRect(-120, timelineY + 105, 240, 50, 10);
-      restartBtn.lineStyle(2, 0xff0066, 1);
-      restartBtn.strokeRoundedRect(-120, timelineY + 105, 240, 50, 10);
-      restartText.setScale(1);
+      backBtn.clear();
+      backBtn.fillStyle(0x330022, 1);
+      backBtn.fillRoundedRect(-120, timelineY + 105, 240, 50, 10);
+      backBtn.lineStyle(2, 0xff0066, 1);
+      backBtn.strokeRoundedRect(-120, timelineY + 105, 240, 50, 10);
+      backText.setScale(1);
     });
     
     hitArea.on('pointerdown', () => {
-      this.restartGame();
+      // Navegar a "Sobre mí" y ocultar el juego
+      const aboutLink = document.querySelector('.nav-link[data-page="about"]');
+      if (aboutLink) {
+        aboutLink.click();
+      }
+      
+      // Ocultar el juego y volver al portfolio
+      if (window.game) {
+        window.game.disable();
+        document.body.classList.remove('game-mode');
+      }
+      
+      // Mostrar botón de inicio
+      const startBtn = document.getElementById('start-game-btn');
+      if (startBtn) {
+        startBtn.classList.remove('hidden');
+      }
+      
+      // Ocultar UI de game over
+      if (this.gameOverUI) {
+        this.gameOverUI.destroy();
+        this.gameOverUI = null;
+      }
     });
     
-    this.gameOverUI.add([bg, statsPanel, gameOverText, mainStats, enemiesTitle, enemyContainer, upgradesTitle, upgradeContainer, timelineTitle, timelineContainer, deathInfoText, restartBtn, restartText, hitArea]);
+    this.gameOverUI.add([bg, statsPanel, gameOverText, mainStats, enemiesTitle, enemyContainer, upgradesTitle, upgradeContainer, timelineTitle, timelineContainer, deathInfoText, backBtn, backText, hitArea]);
     
     // Animación de entrada
     this.gameOverUI.alpha = 0;
@@ -2518,6 +2586,14 @@ export class MainScene extends Phaser.Scene {
     const aboutLink = document.querySelector('.nav-link[data-page="about"]');
     if (aboutLink) {
       aboutLink.click();
+    }
+    
+    // Inicializar el juego automáticamente (activar y desactivar para que funcione correctamente)
+    // Esto asegura que el juego esté listo para la próxima vez que se inicie
+    if (window.initializeGame) {
+      setTimeout(() => {
+        window.initializeGame();
+      }, 300);
     }
   }
   

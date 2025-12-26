@@ -45,11 +45,16 @@ export class Boss extends Phaser.GameObjects.Container {
     // Fases del jefe (se vuelve más agresivo con menos vida)
     this.phase = 1;
     
-    // Crear gráficos
+    // Agregar Container a la escena PRIMERO
+    scene.add.existing(this);
+    this.setDepth(10);
+    this.setVisible(true);
+    this.setActive(true);
+    this.setAlpha(1);
+    
+    // Crear gráficos DESPUÉS de agregar a la escena
     this.createGraphics();
     this.createShields();
-    
-    scene.add.existing(this);
     
     // Física
     scene.physics.add.existing(this);
@@ -101,7 +106,23 @@ export class Boss extends Phaser.GameObjects.Container {
     this.bossBody.fillStyle(0xff0066, 1);
     this.bossBody.fillCircle(0, 0, 4);
     
-    this.add([this.coreGlow, this.bossBody]);
+    // IMPORTANTE: Agregar Graphics directamente a la escena, NO al Container
+    // Los Graphics dentro de Containers no se renderizan correctamente en Phaser 3
+    this.scene.add.existing(this.bossBody);
+    this.scene.add.existing(this.coreGlow);
+    this.bossBody.setDepth(10);
+    this.coreGlow.setDepth(10);
+    this.bossBody.setPosition(this.x, this.y);
+    this.coreGlow.setPosition(this.x, this.y);
+    this.bossBody.setVisible(true);
+    this.bossBody.setActive(true);
+    this.bossBody.setAlpha(1);
+    this.coreGlow.setVisible(true);
+    this.coreGlow.setActive(true);
+    this.coreGlow.setAlpha(1);
+    
+    // Guardar referencia para actualizar posición en update()
+    this.graphicsNeedsUpdate = true;
   }
   
   drawHexagon(graphics, x, y, radius, fill) {
@@ -166,6 +187,16 @@ export class Boss extends Phaser.GameObjects.Container {
   
   update(time, delta) {
     if (this.isDestroyed) return;
+    
+    // Actualizar posición de los Graphics si están fuera del Container
+    if (this.graphicsNeedsUpdate && this.bossBody && this.coreGlow) {
+      this.bossBody.setPosition(this.x, this.y);
+      this.coreGlow.setPosition(this.x, this.y);
+      this.bossBody.setRotation(this.rotation);
+      this.coreGlow.setRotation(this.rotation);
+      this.bossBody.setAlpha(this.alpha);
+      this.coreGlow.setAlpha(this.alpha);
+    }
     
     // Actualizar fase basada en HP
     this.updatePhase();
